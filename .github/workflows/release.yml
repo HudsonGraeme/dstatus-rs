@@ -101,7 +101,7 @@ jobs:
           echo "Stapling binary..."
           for i in {1..5}; do
             echo "Attempt $i to staple..."
-            if xcrun stapler staple "$BINARY_PATH"; then
+            if xcrun stapler staple -v "$BINARY_PATH"; then
               echo "Stapling successful."
               break
             fi
