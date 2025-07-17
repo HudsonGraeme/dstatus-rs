@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          body: "Automated release of dstatus-rs."
+          draft: false
+          prerelease: false
+
+  build-assets:
+    name: Build Assets
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            binary_name: dstatus-rs
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            binary_name: dstatus-rs
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            binary_name: dstatus-rs.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare asset for upload
+        shell: bash
+        run: |
+          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            mv "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "target/${{ matrix.target }}/release/dstatus-rs.exe"
+            7z a "${ASSET_NAME}.zip" "./target/${{ matrix.target }}/release/dstatus-rs.exe"
+            echo "ASSET_PATH=${ASSET_NAME}.zip" >> $GITHUB_ENV
+          else
+            tar -czvf "${ASSET_NAME}.tar.gz" -C "target/${{ matrix.target }}/release" "${{ matrix.binary_name }}"
+            echo "ASSET_PATH=${ASSET_NAME}.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET_PATH }}
+          asset_name: ${{ env.ASSET_PATH }}
+          asset_content_type: application/octet-stream
