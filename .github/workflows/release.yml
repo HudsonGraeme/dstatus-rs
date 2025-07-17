@@ -94,8 +94,25 @@ jobs:
           # Notarize
           xcrun notarytool submit "$ZIP_FOR_NOTARY_PATH" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
 
+          # Ensure the binary is executable.
+          chmod 755 "$BINARY_PATH"
+
           # Staple the original binary
-          xcrun stapler staple "$BINARY_PATH"
+          echo "Stapling binary..."
+          for i in {1..5}; do
+            echo "Attempt $i to staple..."
+            if xcrun stapler staple "$BINARY_PATH"; then
+              echo "Stapling successful."
+              break
+            fi
+            if [ $i -lt 5 ]; then
+              echo "Stapling failed. Retrying in 30 seconds..."
+              sleep 30
+            else
+              echo "Stapling failed after 5 attempts."
+              exit 1
+            fi
+          done
 
           # Re-package the stapled binary for the final release asset
           ditto -c -k --sequesterRsrc --keepParent "$BINARY_PATH" "$FINAL_ASSET_PATH"
