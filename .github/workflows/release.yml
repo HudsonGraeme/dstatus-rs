@@ -38,6 +38,9 @@ jobs:
           - target: x86_64-apple-darwin
             os: macos-latest
             binary_name: dstatus-rs
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            binary_name: dstatus-rs
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             binary_name: dstatus-rs.exe
@@ -48,6 +51,9 @@ jobs:
         with:
           toolchain: stable
           override: true
+
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}

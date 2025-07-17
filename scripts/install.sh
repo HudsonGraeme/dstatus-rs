@@ -35,7 +35,11 @@ DOWNLOAD_URL=""
 if [ "$OS_TYPE" == "linux" ]; then
     ASSET_NAME="${BINARY_NAME}-x86_64-unknown-linux-gnu.tar.gz"
 elif [ "$OS_TYPE" == "macos" ]; then
-    ASSET_NAME="${BINARY_NAME}-x86_64-apple-darwin.tar.gz"
+    if [ "$ARCH_TYPE" == "x86_64" ]; then
+        ASSET_NAME="${BINARY_NAME}-x86_64-apple-darwin.tar.gz"
+    else
+        ASSET_NAME="${BINARY_NAME}-aarch64-apple-darwin.tar.gz"
+    fi
 fi
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ASSET_NAME}"
