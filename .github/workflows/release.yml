@@ -88,8 +88,8 @@ jobs:
           # Sign binary
           codesign --force --options runtime --sign "$CERT_IDENTITY" "$BINARY_PATH"
 
-          # Package for notarization
-          ditto -c -k --sequesterRsrc --keepParent "$BINARY_PATH" "$ZIP_FOR_NOTARY_PATH"
+          # Package for notarization using zip, which is simpler for single binaries.
+          zip -j "$ZIP_FOR_NOTARY_PATH" "$BINARY_PATH"
 
           # Notarize
           xcrun notarytool submit "$ZIP_FOR_NOTARY_PATH" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
@@ -114,8 +114,8 @@ jobs:
             fi
           done
 
-          # Re-package the stapled binary for the final release asset
-          ditto -c -k --sequesterRsrc --keepParent "$BINARY_PATH" "$FINAL_ASSET_PATH"
+          # Re-package the stapled binary for the final release asset.
+          zip -j "$FINAL_ASSET_PATH" "$BINARY_PATH"
 
           echo "ASSET_PATH=${FINAL_ASSET_PATH}" >> $GITHUB_ENV
 
