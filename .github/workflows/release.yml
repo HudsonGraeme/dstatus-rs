@@ -79,20 +79,28 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
           CERT_IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -n 1 | awk -F '"' '{print $2}')
 
+          # Define paths
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
+          ZIP_FOR_NOTARY_PATH="${ASSET_NAME}-notary.zip"
+          FINAL_ASSET_PATH="${ASSET_NAME}.zip"
+
           # Sign binary
-          codesign --force --options runtime --sign "$CERT_IDENTITY" "target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          codesign --force --options runtime --sign "$CERT_IDENTITY" "$BINARY_PATH"
 
           # Package for notarization
-          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
-          ditto -c -k --sequesterRsrc --keepParent "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "${ASSET_NAME}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$BINARY_PATH" "$ZIP_FOR_NOTARY_PATH"
 
           # Notarize
-          xcrun notarytool submit "${ASSET_NAME}.zip" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun notarytool submit "$ZIP_FOR_NOTARY_PATH" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
 
-          # Staple
-          xcrun stapler staple "${ASSET_NAME}.zip"
+          # Staple the original binary
+          xcrun stapler staple "$BINARY_PATH"
 
-          echo "ASSET_PATH=${ASSET_NAME}.zip" >> $GITHUB_ENV
+          # Re-package the stapled binary for the final release asset
+          ditto -c -k --sequesterRsrc --keepParent "$BINARY_PATH" "$FINAL_ASSET_PATH"
+
+          echo "ASSET_PATH=${FINAL_ASSET_PATH}" >> $GITHUB_ENV
 
       - name: Prepare asset for upload
         if: runner.os != 'macOS'
