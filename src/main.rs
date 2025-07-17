@@ -19,6 +19,19 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use crate::config::Config;
 use rich_presence::RichPresence;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn display_banner() {
+    println!("\x1b[35m      _ ____  _        _                        ");
+    println!("   __| / ___|| |_ __ _| |_ _   _ ___   _ __ ___  ");
+    println!("  / _` \\___ \\| __/ _` | __| | | / __| | '__/ __| ");
+    println!(" | (_| |___) | || (_| | |_| |_| \\__ \\_| |  \\__ \\ ");
+    println!("  \\__,_|____/ \\__\\__,_|\\__|\\__,_|___(_|_|  |___/ ");
+    println!("\x1b[0m");
+    println!("                    v{}", VERSION);
+    println!();
+}
+
 fn get_config_dir() -> PathBuf {
     let mut config_path = dirs::home_dir().expect("Failed to find home directory");
     config_path.push(".config");
@@ -58,6 +71,7 @@ enum Commands {
 }
 
 fn main() {
+    display_banner();
     let args = Args::parse();
 
     match args.command {
