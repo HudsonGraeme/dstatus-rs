@@ -18,20 +18,20 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use crate::config::Config;
 use rich_presence::RichPresence;
 
-const PID_FILE: &str = "/tmp/dstatus.pid";
-
-fn get_config_path() -> PathBuf {
+fn get_config_dir() -> PathBuf {
     let mut config_path = dirs::home_dir().expect("Failed to find home directory");
     config_path.push(".config");
     config_path.push("dstatus");
+    fs::create_dir_all(&config_path).expect("Failed to create config directory");
     config_path
 }
 
+fn get_pid_path() -> PathBuf {
+    get_config_dir().join("dstatus.pid")
+}
+
 fn get_log_path() -> PathBuf {
-    let mut log_path = get_config_path();
-    fs::create_dir_all(&log_path).expect("Failed to create config directory");
-    log_path.push("dstatus.log");
-    log_path
+    get_config_dir().join("dstatus.log")
 }
 
 #[derive(Parser)]
@@ -59,7 +59,7 @@ fn main() {
 
     match args.command {
         Commands::On => {
-            if let Ok(pid_str) = fs::read_to_string(PID_FILE) {
+            if let Ok(pid_str) = fs::read_to_string(get_pid_path()) {
                 eprintln!("Daemon is already running with PID {}", pid_str);
                 return;
             }
@@ -75,51 +75,50 @@ fn main() {
                 .spawn()
                 .expect("Failed to spawn daemon");
 
-            fs::write(PID_FILE, child.id().to_string()).expect("Failed to write PID file");
+            fs::write(get_pid_path(), child.id().to_string()).expect("Failed to write PID file");
             println!("Daemon started with PID {}", child.id());
         }
         Commands::Off => {
-            if let Ok(pid_str) = fs::read_to_string(PID_FILE) {
+            if let Ok(pid_str) = fs::read_to_string(get_pid_path()) {
                 if let Ok(pid_val) = pid_str.trim().parse() {
                     let pid = Pid::from_raw(pid_val);
                     if signal::kill(pid, Signal::SIGTERM).is_ok() {
-                        fs::remove_file(PID_FILE).unwrap();
+                        fs::remove_file(get_pid_path()).unwrap();
                         println!("Daemon stopped");
                     } else {
                         eprintln!("Failed to stop daemon. It may have already been stopped.");
-                        fs::remove_file(PID_FILE).unwrap();
+                        fs::remove_file(get_pid_path()).unwrap();
                     }
                 } else {
                     eprintln!("Invalid PID file. Removing it.");
-                    fs::remove_file(PID_FILE).unwrap();
+                    fs::remove_file(get_pid_path()).unwrap();
                 }
             } else {
                 eprintln!("Daemon is not running");
             }
         }
         Commands::Configure => {
-            let config_dir = get_config_path();
-            fs::create_dir_all(&config_dir).expect("Failed to create config directory");
-            let config_file = config_dir.join("configuration.toml");
-
-            let config = Config::from_file(config_file.to_str().unwrap()).unwrap_or_else(|_| Config {
-                client_id: "".to_string(),
-                details: "".to_string(),
-                state: "".to_string(),
-                large_image: "".to_string(),
-                large_text: "".to_string(),
-                small_image: "".to_string(),
-                small_text: "".to_string(),
-                party_size: 0,
-                max_party_size: 0,
-                buttons: None,
+            let config_file = get_config_dir().join("configuration.toml");
+            let config = Config::from_file(config_file.to_str().unwrap()).unwrap_or_else(|_| {
+                Config {
+                    client_id: "".to_string(),
+                    details: "".to_string(),
+                    state: "".to_string(),
+                    large_image: "".to_string(),
+                    large_text: "".to_string(),
+                    small_image: "".to_string(),
+                    small_text: "".to_string(),
+                    party_size: 0,
+                    max_party_size: 0,
+                    buttons: None,
+                }
             });
             let updated_config = tui::run_tui(config).unwrap();
             updated_config
                 .save_to_file(config_file.to_str().unwrap())
                 .unwrap();
 
-            if let Ok(pid_str) = fs::read_to_string(PID_FILE) {
+            if let Ok(pid_str) = fs::read_to_string(get_pid_path()) {
                 if let Ok(pid_val) = pid_str.trim().parse() {
                     let pid = Pid::from_raw(pid_val);
                     let _ = signal::kill(pid, Signal::SIGHUP);
@@ -139,7 +138,7 @@ fn main() {
         Commands::InternalRun => {
             if let Err(e) = run() {
                 eprintln!("Error: {:?}", e);
-                fs::remove_file(PID_FILE).unwrap();
+                fs::remove_file(get_pid_path()).unwrap();
                 std::process::exit(1);
             }
         }
@@ -148,7 +147,7 @@ fn main() {
 
 fn run() -> anyhow::Result<()> {
     let mut signals = Signals::new(&[SIGHUP])?;
-    let config_file = get_config_path().join("configuration.toml");
+    let config_file = get_config_dir().join("configuration.toml");
 
     tracing_subscriber::registry()
         .with(fmt::layer().with_target(true).with_ansi(false))

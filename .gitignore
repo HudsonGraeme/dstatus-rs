@@ -1,3 +1,5 @@
 /target
 /configuration.toml
 .DS_Store
+**.tar.gz
+/dist

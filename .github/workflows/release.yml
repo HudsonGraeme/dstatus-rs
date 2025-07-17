@@ -29,6 +29,8 @@ jobs:
   build-assets:
     name: Build Assets
     needs: create-release
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -45,6 +47,12 @@ jobs:
             os: windows-latest
             binary_name: dstatus-rs.exe
     runs-on: ${{ matrix.os }}
+    env:
+      APPLE_SIGNING_CERTIFICATE: ${{ secrets.APPLE_SIGNING_CERTIFICATE }}
+      APPLE_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_SIGNING_CERTIFICATE_PASSWORD }}
+      APPLE_NOTARIZATION_USERNAME: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}
+      APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -58,7 +66,36 @@ jobs:
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Sign and Notarize macOS Binaries
+        if: runner.os == 'macOS'
+        run: |
+          # Import certificate
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$APPLE_SIGNING_CERTIFICATE" | base64 --decode -o certificate.p12
+          security create-keychain -p "temporary_password" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "temporary_password" $KEYCHAIN_PATH
+          security import certificate.p12 -P "$APPLE_SIGNING_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          CERT_IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -n 1 | awk -F '"' '{print $2}')
+
+          # Sign binary
+          codesign --force --options runtime --sign "$CERT_IDENTITY" "target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+
+          # Package for notarization
+          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
+          ditto -c -k --sequesterRsrc --keepParent "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "${ASSET_NAME}.zip"
+
+          # Notarize
+          xcrun notarytool submit "${ASSET_NAME}.zip" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+
+          # Staple
+          xcrun stapler staple "${ASSET_NAME}.zip"
+
+          echo "ASSET_PATH=${ASSET_NAME}.zip" >> $GITHUB_ENV
+
       - name: Prepare asset for upload
+        if: runner.os != 'macOS'
         shell: bash
         run: |
           ASSET_NAME="dstatus-rs-${{ matrix.target }}"
