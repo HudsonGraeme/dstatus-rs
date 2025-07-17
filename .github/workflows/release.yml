@@ -80,28 +80,58 @@ jobs:
           CERT_IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -n 1 | awk -F '"' '{print $2}')
 
           # Define paths
-          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
-          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
+          BINARY_NAME="dstatus-rs"
+          TARGET_BINARY_PATH="target/${{ matrix.target }}/release/${BINARY_NAME}"
+          APP_BUNDLE_NAME="${BINARY_NAME}.app"
+          MACOS_DIR="${APP_BUNDLE_NAME}/Contents/MacOS"
+          CONTENTS_DIR="${APP_BUNDLE_NAME}/Contents"
+          ASSET_NAME="${BINARY_NAME}-${{ matrix.target }}"
           ZIP_FOR_NOTARY_PATH="${ASSET_NAME}-notary.zip"
           FINAL_ASSET_PATH="${ASSET_NAME}.zip"
 
-          # Sign binary
-          codesign --force --options runtime --sign "$CERT_IDENTITY" "$BINARY_PATH"
+          # Create the .app bundle structure
+          mkdir -p "$MACOS_DIR"
 
-          # Package for notarization using zip, which is simpler for single binaries.
-          zip -j "$ZIP_FOR_NOTARY_PATH" "$BINARY_PATH"
+          # Copy the executable
+          cp "$TARGET_BINARY_PATH" "$MACOS_DIR/"
 
-          # Notarize
+          # Create a minimal Info.plist
+          VERSION=$(grep '^version' Cargo.toml | head -n 1 | awk -F '"' '{print $2}')
+          cat > "${CONTENTS_DIR}/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>${BINARY_NAME}</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.example.dstatus-rs</string>
+              <key>CFBundleName</key>
+              <string>${BINARY_NAME}</string>
+              <key>CFBundleVersion</key>
+              <string>${VERSION}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${VERSION}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Sign the .app bundle itself (which also signs the executable inside)
+          codesign --force --deep --options runtime --sign "$CERT_IDENTITY" "$APP_BUNDLE_NAME"
+
+          # Package the signed .app bundle for notarization
+          zip -r "$ZIP_FOR_NOTARY_PATH" "$APP_BUNDLE_NAME"
+
+          # Notarize the zip file
           xcrun notarytool submit "$ZIP_FOR_NOTARY_PATH" --apple-id "$APPLE_NOTARIZATION_USERNAME" --password "$APPLE_NOTARIZATION_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
 
-          # Ensure the binary is executable.
-          chmod 755 "$BINARY_PATH"
-
-          # Staple the original binary
-          echo "Stapling binary..."
+          # Staple the .app bundle (NOT the zip)
+          echo "Stapling .app bundle..."
           for i in {1..5}; do
             echo "Attempt $i to staple..."
-            if xcrun stapler staple -v "$BINARY_PATH"; then
+            if xcrun stapler staple -v "$APP_BUNDLE_NAME"; then
               echo "Stapling successful."
               break
             fi
@@ -114,8 +144,8 @@ jobs:
             fi
           done
 
-          # Re-package the stapled binary for the final release asset.
-          zip -j "$FINAL_ASSET_PATH" "$BINARY_PATH"
+          # Re-package the stapled .app bundle for the final release asset.
+          zip -r "$FINAL_ASSET_PATH" "$APP_BUNDLE_NAME"
 
           echo "ASSET_PATH=${FINAL_ASSET_PATH}" >> $GITHUB_ENV
 
