@@ -19,6 +19,10 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 toml = "0.8.13"
 dirs = "5.0.1"
+ratatui = { version = "0.27.0", features = ["all-widgets"] }
+crossterm = "0.27.0"
+unicode-width = "0.1.14"
+signal-hook = "0.3.18"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.28", features = ["signal"] }

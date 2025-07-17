@@ -9,6 +9,7 @@ use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 
 use tracing::{debug, error, info, warn};
+use crate::config::Button;
 
 #[derive(Default)]
 pub struct StreamManager {
@@ -92,7 +93,7 @@ pub struct Activity {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secrets: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub buttons: Option<serde_json::Value>,
+    pub buttons: Option<Vec<Button>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instance: Option<bool>,
 }
@@ -122,12 +123,6 @@ pub struct Secrets {
     pub join: Option<String>,
     pub spectate: Option<String>,
     pub match_: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Button {
-    pub label: String,
-    pub url: String,
 }
 
 impl StreamManager {

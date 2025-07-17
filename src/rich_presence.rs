@@ -46,6 +46,10 @@ impl RichPresence {
         }
     }
 
+    pub fn update_config(&mut self, config: Config) {
+        self.config = config;
+    }
+
     pub fn start(&mut self) -> Result<(), anyhow::Error> {
         info!(
             "Connecting to Discord with client ID: {}",
@@ -88,10 +92,12 @@ impl RichPresence {
     }
 
     pub fn set_activity(&mut self) -> Result<()> {
+        let buttons = self.config.buttons.clone();
+
         let activity = Activity {
             state: Some(self.config.state.clone()),
             details: Some(self.config.details.clone()),
-            timestamps: Some(serde_json::json!({})),
+            timestamps: None,
             assets: Some(serde_json::json!({
                 "large_image": self.config.large_image.clone(),
                 "large_text": self.config.large_text.clone(),
@@ -102,10 +108,11 @@ impl RichPresence {
                 "size": [self.config.party_size, self.config.max_party_size]
             })),
             secrets: None,
-            buttons: Some(serde_json::json!([{
-                "label": "GitHub",
-                "url": "https://github.com/HudsonGraeme/dstatus-rs"
-            }])),
+            buttons: if buttons.as_ref().map_or(false, |b| !b.is_empty()) {
+                buttons
+            } else {
+                None
+            },
             instance: Some(false),
         };
 
