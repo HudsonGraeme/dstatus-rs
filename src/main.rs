@@ -11,6 +11,7 @@ use nix::unistd::Pid;
 use signal_hook::consts::SIGHUP;
 use signal_hook::iterator::Signals;
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -50,6 +51,8 @@ enum Commands {
     Configure,
     /// Shows the daemon logs
     Logs,
+    /// Updates dstatus to the latest version
+    Update,
     #[command(hide = true)]
     InternalRun,
 }
@@ -133,6 +136,52 @@ fn main() {
                 println!("{}", logs);
             } else {
                 println!("No logs found.");
+            }
+        }
+        Commands::Update => {
+            println!("Updating dstatus to the latest version...");
+
+            let install_script_url = "https://raw.githubusercontent.com/HudsonGraeme/dstatus-rs/main/scripts/install.sh";
+
+            let output = Command::new("curl")
+                .args(["-sSL", install_script_url])
+                .output();
+
+            match output {
+                Ok(curl_output) if curl_output.status.success() => {
+                    let install_script = String::from_utf8_lossy(&curl_output.stdout);
+
+                    let mut bash_process = Command::new("bash")
+                        .stdin(std::process::Stdio::piped())
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
+                        .spawn()
+                        .expect("Failed to start bash process");
+
+                    if let Some(stdin) = bash_process.stdin.as_mut() {
+                        stdin.write_all(install_script.as_bytes()).expect("Failed to write to bash stdin");
+                    }
+
+                    let install_output = bash_process.wait_with_output().expect("Failed to wait for bash process");
+
+                    if install_output.status.success() {
+                        println!("✓ Successfully updated dstatus!");
+                        println!("{}", String::from_utf8_lossy(&install_output.stdout));
+                    } else {
+                        eprintln!("✗ Update failed:");
+                        eprintln!("{}", String::from_utf8_lossy(&install_output.stderr));
+                        std::process::exit(1);
+                    }
+                }
+                Ok(_) => {
+                    eprintln!("✗ Failed to download install script");
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("✗ curl command failed: {}", e);
+                    eprintln!("Please make sure curl is installed and try again.");
+                    std::process::exit(1);
+                }
             }
         }
         Commands::InternalRun => {
