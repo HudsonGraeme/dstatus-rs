@@ -101,10 +101,15 @@ pub fn run_tui(config: Config) -> io::Result<Config> {
                         if app.config.buttons.is_none() {
                             app.config.buttons = Some(Vec::new());
                         }
-                        app.config.buttons.as_mut().unwrap().push(Button {
-                            label: String::new(),
-                            url: String::new(),
-                        });
+                        let buttons = app.config.buttons.as_ref().unwrap();
+                        if buttons.len() >= 2 {
+                            app.error_message = Some("Maximum of 2 buttons allowed.".to_string());
+                        } else {
+                            app.config.buttons.as_mut().unwrap().push(Button {
+                                label: String::new(),
+                                url: String::new(),
+                            });
+                        }
                     } else if app.current_field >= 8 {
                         let button_index = app.current_field - 8;
                         if button_index < num_buttons {

@@ -30,7 +30,14 @@ impl Config {
 
     pub fn from_file(path: &str) -> io::Result<Self> {
         let toml_string = fs::read_to_string(path)?;
-        let config = toml::from_str(&toml_string).unwrap();
+        let mut config: Config = toml::from_str(&toml_string).unwrap();
+
+        if let Some(buttons) = &mut config.buttons {
+            if buttons.len() > 2 {
+                buttons.truncate(2);
+            }
+        }
+
         Ok(config)
     }
 }
