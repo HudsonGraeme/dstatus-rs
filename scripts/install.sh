@@ -5,7 +5,7 @@ set -e
 # Configuration
 REPO="HudsonGraeme/dstatus-rs"
 INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="dstatus-rs"
+BINARY_NAME="dstatus"
 
 # Detect OS and architecture
 OS_TYPE=""
@@ -18,7 +18,9 @@ esac
 ARCH_TYPE=""
 case "$(uname -m)" in
     x86_64)     ARCH_TYPE=x86_64;;
-    *)          echo "Unsupported architecture"; exit 1;;
+    arm64)      ARCH_TYPE=aarch64;;
+    aarch64)    ARCH_TYPE=aarch64;;
+    *)          echo "Unsupported architecture: $(uname -m)"; exit 1;;
 esac
 
 # Get the latest release tag
@@ -33,12 +35,12 @@ ASSET_NAME=""
 DOWNLOAD_URL=""
 
 if [ "$OS_TYPE" == "linux" ]; then
-    ASSET_NAME="${BINARY_NAME}-x86_64-unknown-linux-gnu.tar.gz"
+    ASSET_NAME="dstatus-rs-x86_64-unknown-linux-gnu.tar.gz"
 elif [ "$OS_TYPE" == "macos" ]; then
     if [ "$ARCH_TYPE" == "x86_64" ]; then
-        ASSET_NAME="${BINARY_NAME}-x86_64-apple-darwin.tar.gz"
+        ASSET_NAME="dstatus-rs-x86_64-apple-darwin.zip"
     else
-        ASSET_NAME="${BINARY_NAME}-aarch64-apple-darwin.tar.gz"
+        ASSET_NAME="dstatus-rs-aarch64-apple-darwin.zip"
     fi
 fi
 
@@ -48,18 +50,44 @@ DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ASSET
 echo "Downloading ${BINARY_NAME} from ${DOWNLOAD_URL}"
 curl -L -o "/tmp/${ASSET_NAME}" "$DOWNLOAD_URL"
 
-echo "Installing ${BINARY_NAME} to ${INSTALL_DIR}"
+echo "Installing ${BINARY_NAME}..."
 if [[ "$ASSET_NAME" == *.tar.gz ]]; then
+    # Linux: Extract binary directly
     tar -xzf "/tmp/${ASSET_NAME}" -C "/tmp"
     mv "/tmp/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-else
-    unzip -o "/tmp/${ASSET_NAME}" -d "/tmp"
-    mv "/tmp/${BINARY_NAME}.exe" "${INSTALL_DIR}/${BINARY_NAME}"
-fi
+    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+elif [[ "$ASSET_NAME" == *.zip ]]; then
+    # macOS: Install .app bundle and create symlink
+    unzip -q "/tmp/${ASSET_NAME}" -d "/tmp"
+    if [ -d "/tmp/${BINARY_NAME}.app" ]; then
+        # Remove existing installation if it exists
+        if [ -d "/Applications/${BINARY_NAME}.app" ]; then
+            echo "Removing existing installation..."
+            rm -rf "/Applications/${BINARY_NAME}.app"
+        fi
 
-chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+        # Install .app bundle to /Applications/
+        echo "Installing ${BINARY_NAME}.app to /Applications/"
+        mv "/tmp/${BINARY_NAME}.app" "/Applications/"
+
+        # Create symlink in /usr/local/bin/
+        echo "Creating symlink in ${INSTALL_DIR}/"
+        mkdir -p "${INSTALL_DIR}"
+        ln -sf "/Applications/${BINARY_NAME}.app/Contents/MacOS/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+    else
+        # Fallback for regular zip file
+        mv "/tmp/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+    fi
+fi
 
 # Clean up
 rm "/tmp/${ASSET_NAME}"
 
 echo "${BINARY_NAME} installed successfully."
+if [ "$OS_TYPE" == "macos" ]; then
+    echo "App bundle installed to: /Applications/${BINARY_NAME}.app"
+    echo "Command-line access via: ${BINARY_NAME}"
+else
+    echo "You can now run: ${BINARY_NAME}"
+fi

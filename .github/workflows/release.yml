@@ -36,16 +36,10 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            binary_name: dstatus-rs
           - target: x86_64-apple-darwin
             os: macos-latest
-            binary_name: dstatus-rs
           - target: aarch64-apple-darwin
             os: macos-latest
-            binary_name: dstatus-rs
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            binary_name: dstatus-rs.exe
     runs-on: ${{ matrix.os }}
     env:
       APPLE_SIGNING_CERTIFICATE: ${{ secrets.APPLE_SIGNING_CERTIFICATE }}
@@ -80,12 +74,12 @@ jobs:
           CERT_IDENTITY=$(security find-identity -v -p codesigning $KEYCHAIN_PATH | grep "Developer ID Application" | head -n 1 | awk -F '"' '{print $2}')
 
           # Define paths
-          BINARY_NAME="dstatus-rs"
+          BINARY_NAME="dstatus"
           TARGET_BINARY_PATH="target/${{ matrix.target }}/release/${BINARY_NAME}"
           APP_BUNDLE_NAME="${BINARY_NAME}.app"
           MACOS_DIR="${APP_BUNDLE_NAME}/Contents/MacOS"
           CONTENTS_DIR="${APP_BUNDLE_NAME}/Contents"
-          ASSET_NAME="${BINARY_NAME}-${{ matrix.target }}"
+          ASSET_NAME="dstatus-rs-${{ matrix.target }}"
           ZIP_FOR_NOTARY_PATH="${ASSET_NAME}-notary.zip"
           FINAL_ASSET_PATH="${ASSET_NAME}.zip"
 
@@ -154,14 +148,8 @@ jobs:
         shell: bash
         run: |
           ASSET_NAME="dstatus-rs-${{ matrix.target }}"
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            mv "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "target/${{ matrix.target }}/release/dstatus-rs.exe"
-            7z a "${ASSET_NAME}.zip" "./target/${{ matrix.target }}/release/dstatus-rs.exe"
-            echo "ASSET_PATH=${ASSET_NAME}.zip" >> $GITHUB_ENV
-          else
-            tar -czvf "${ASSET_NAME}.tar.gz" -C "target/${{ matrix.target }}/release" "${{ matrix.binary_name }}"
-            echo "ASSET_PATH=${ASSET_NAME}.tar.gz" >> $GITHUB_ENV
-          fi
+          tar -czvf "${ASSET_NAME}.tar.gz" -C "target/${{ matrix.target }}/release" "dstatus"
+          echo "ASSET_PATH=${ASSET_NAME}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1

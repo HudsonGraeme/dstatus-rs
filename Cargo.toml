@@ -7,6 +7,9 @@ description = "Discord status manager"
 authors = ["HudsonGraeme"]
 repository = "https://github.com/HudsonGraeme/dstatus-rs"
 
+[[bin]]
+name = "dstatus"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.86"
