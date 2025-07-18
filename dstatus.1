@@ -18,8 +18,8 @@ Stops the Rich Presence daemon by sending a SIGTERM signal to the running proces
 .B configure
 Opens a terminal user interface to create or modify the configuration file. Automatically reloads the daemon configuration if it's running.
 .TP
-.B load \fIPATH\fR
-Loads a configuration file from the specified path and saves it as the active configuration. Validates the file format and automatically reloads the daemon configuration if it's running.
+.B load \fISOURCE\fR
+Loads a configuration file from the specified path or URL and saves it as the active configuration. If the source starts with http:// or https://, it will be downloaded as TOML plaintext. Validates the file format and automatically reloads the daemon configuration if it's running.
 .TP
 .B logs
 Displays the daemon logs from the log file.

@@ -95,10 +95,10 @@ enum Commands {
     Off,
     /// Creates a new configuration file
     Configure,
-    /// Loads a configuration file from the specified path
+    /// Loads a configuration file from the specified path or URL
     Load {
-        /// Path to the configuration.toml file to load
-        path: PathBuf,
+        /// Path to the configuration.toml file to load or URL to download from
+        source: String,
     },
     /// Shows the daemon logs
     Logs,
@@ -184,14 +184,53 @@ fn main() {
 
             println!("Configuration saved to {:?}", config_file);
         }
-        Commands::Load { path } => {
-            if !path.exists() {
-                eprintln!("Error: Configuration file '{}' does not exist", path.display());
-                std::process::exit(1);
-            }
+        Commands::Load { source } => {
+            let toml_content = if source.starts_with("http://") || source.starts_with("https://") {
+                match reqwest::blocking::get(&source) {
+                    Ok(response) => {
+                        if !response.status().is_success() {
+                            eprintln!("Error: Failed to download from '{}': HTTP {}", source, response.status());
+                            std::process::exit(1);
+                        }
+                        match response.text() {
+                            Ok(content) => {
+                                println!("Downloaded configuration from '{}'", source);
+                                content
+                            }
+                            Err(e) => {
+                                eprintln!("Error: Failed to read response from '{}': {}", source, e);
+                                std::process::exit(1);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error: Failed to download from '{}': {}", source, e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                let path = std::path::Path::new(&source);
+                if !path.exists() {
+                    eprintln!("Error: Configuration file '{}' does not exist", source);
+                    std::process::exit(1);
+                }
+                match fs::read_to_string(path) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        eprintln!("Error: Failed to read configuration file '{}': {}", source, e);
+                        std::process::exit(1);
+                    }
+                }
+            };
 
-            match Config::from_file(path.to_str().unwrap()) {
-                Ok(config) => {
+            match toml::from_str::<Config>(&toml_content) {
+                Ok(mut config) => {
+                    if let Some(buttons) = &mut config.buttons {
+                        if buttons.len() > 2 {
+                            buttons.truncate(2);
+                        }
+                    }
+
                     let config_file = get_config_dir().join("configuration.toml");
 
                     if let Err(e) = config.save_to_file(config_file.to_str().unwrap()) {
@@ -206,10 +245,10 @@ fn main() {
                         }
                     }
 
-                    println!("Configuration loaded from '{}' and saved to {:?}", path.display(), config_file);
+                    println!("Configuration loaded from '{}' and saved to {:?}", source, config_file);
                 }
                 Err(e) => {
-                    eprintln!("Error: Failed to parse configuration file '{}': {}", path.display(), e);
+                    eprintln!("Error: Failed to parse TOML configuration from '{}': {}", source, e);
                     std::process::exit(1);
                 }
             }
