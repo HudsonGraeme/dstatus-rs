@@ -1,6 +1,32 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+
+  --color-green-400: #4ade80;
+  --color-red-400: #f87171;
+  --color-yellow-400: #facc15;
+  --color-purple-600: #9333ea;
+}
+
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -9,40 +35,48 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f8fafc;
+  background-color: #18181b;
+  color: #fafafa;
 }
 
-#root {
-  height: 100vh;
+input, button {
+  font-family: inherit;
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+input:focus, button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
-.discord-preview {
-  background: #36393f;
-  color: #dcddde;
-  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+button {
+  cursor: pointer;
 }
 
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
+/* Custom animations for dynamic island */
+.dynamic-island-enter {
+  opacity: 0;
+  transform: scale(0.95) translateY(16px);
+}
+.dynamic-island-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dynamic-island-exit {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+.dynamic-island-exit-active {
+  opacity: 0;
+  transform: scale(0.95) translateY(16px);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgba(155, 155, 155, 0.5);
-  border-radius: 20px;
-  border: transparent;
+.hover\:shadow-3xl:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }

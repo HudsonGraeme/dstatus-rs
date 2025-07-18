@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Config } from "../types";
 
 interface DiscordPreviewProps {
@@ -6,187 +6,139 @@ interface DiscordPreviewProps {
 }
 
 export default function DiscordPreview({ config }: DiscordPreviewProps) {
+  const { details, state, large_image, large_text, small_image, small_text } =
+    config;
+
+  const ActivityTimestamp = () => {
+    const [time, setTime] = useState("00:00 elapsed");
+
+    useEffect(() => {
+      let seconds = 0;
+      const interval = setInterval(() => {
+        seconds++;
+        const minutes = Math.floor(seconds / 60)
+          .toString()
+          .padStart(2, "0");
+        const secs = (seconds % 60).toString().padStart(2, "0");
+        setTime(`${minutes}:${secs} elapsed`);
+      }, 1000);
+      return () => clearInterval(interval);
+    }, []);
+
+    return <p className="text-xs text-zinc-400">{time}</p>;
+  };
+
   return (
-    <div className="h-full p-8 bg-gray-50">
-      <div className="max-w-2xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg overflow-hidden"
-        >
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Discord Rich Presence Preview
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              This is how your Rich Presence will appear in Discord
-            </p>
-          </div>
+    <div className="max-w-2xl">
+      <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white">Discord Preview</h3>
+          <p className="text-sm text-zinc-400 mt-1">
+            This is how your Rich Presence will appear in Discord
+          </p>
+        </div>
 
-          <div className="p-6">
-            <div className="discord-preview rounded-xl p-6 border border-gray-700">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">U</span>
-                  </div>
-                </div>
+        {/* Discord Mockup */}
+        <div className="rounded-lg bg-[#36393f] border border-[#4f545c] p-4 font-['Whitney'] text-[#dcddde]">
+          <div className="flex items-start space-x-3">
+            {/* User Avatar */}
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm">
+              U
+            </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className="text-white font-semibold">Username</span>
-                    <span className="text-xs text-gray-400 bg-gray-600 px-2 py-1 rounded">
-                      Playing a game
-                    </span>
-                  </div>
+            <div className="flex-1 space-y-2">
+              {/* User Info */}
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-white text-sm">
+                  Username
+                </span>
+                <span className="bg-[#5865f2] text-white text-xs px-2 py-0.5 rounded font-medium">
+                  Playing a game
+                </span>
+              </div>
 
-                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
-                    <div className="flex items-start space-x-3">
-                      {config.large_image && (
-                        <div className="flex-shrink-0 relative">
-                          <div className="w-16 h-16 bg-gray-600 rounded-lg flex items-center justify-center">
-                            {config.large_image.startsWith("http") ? (
+              {/* Activity Card */}
+              <div className="bg-[#2f3136] border border-[#4f545c] rounded-lg p-3">
+                <div className="flex items-start space-x-3">
+                  {/* Activity Images */}
+                  {large_image && (
+                    <div className="relative">
+                      <div className="w-16 h-16 bg-[#4f545c] rounded-lg flex items-center justify-center text-xs text-[#72767d] overflow-hidden">
+                        {large_image.startsWith("http") ? (
+                          <img
+                            src={large_image}
+                            alt={large_text || "Large image"}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <span className="text-center px-1">
+                            {large_image}
+                          </span>
+                        )}
+                      </div>
+                      {small_image && (
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#2f3136] rounded-full border-2 border-[#2f3136] flex items-center justify-center">
+                          <div className="w-5 h-5 bg-[#4f545c] rounded-full flex items-center justify-center text-xs text-[#72767d] overflow-hidden">
+                            {small_image.startsWith("http") ? (
                               <img
-                                src={config.large_image}
-                                alt={config.large_text || "Large image"}
-                                className="w-full h-full object-cover rounded-lg"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = "none";
-                                }}
+                                src={small_image}
+                                alt={small_text || "Small image"}
+                                className="w-full h-full object-cover rounded-full"
                               />
                             ) : (
-                              <span className="text-gray-400 text-xs text-center">
-                                {config.large_image}
-                              </span>
+                              <span>{small_image.slice(0, 1)}</span>
                             )}
                           </div>
-                          {config.small_image && (
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-600 rounded-full border-2 border-gray-800 flex items-center justify-center">
-                              {config.small_image.startsWith("http") ? (
-                                <img
-                                  src={config.small_image}
-                                  alt={config.small_text || "Small image"}
-                                  className="w-full h-full object-cover rounded-full"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = "none";
-                                  }}
-                                />
-                              ) : (
-                                <span className="text-gray-400 text-xs">
-                                  {config.small_image.slice(0, 2)}
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       )}
-
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white font-semibold text-sm mb-1">
-                          {config.details || "No details provided"}
-                        </div>
-                        {config.state && (
-                          <div className="text-gray-300 text-sm mb-2">
-                            {config.state}
-                          </div>
-                        )}
-                        {config.party_size > 0 && config.max_party_size > 0 && (
-                          <div className="text-gray-300 text-sm mb-2">
-                            ({config.party_size} of {config.max_party_size})
-                          </div>
-                        )}
-                        <div className="text-gray-400 text-xs">
-                          00:01 elapsed
-                        </div>
-                      </div>
                     </div>
+                  )}
 
-                    {config.buttons && config.buttons.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        {config.buttons.map((button, index) => (
-                          <button
-                            key={index}
-                            className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 px-4 rounded transition-colors"
-                            disabled
-                          >
-                            {button.label || `Button ${index + 1}`}
-                          </button>
-                        ))}
+                  {/* Activity Details */}
+                  <div className="flex-1 space-y-1">
+                    <div className="font-semibold text-white text-sm">
+                      {details || "dstatus"}
+                    </div>
+                    {state && (
+                      <div className="text-[#b9bbbe] text-sm">{state}</div>
+                    )}
+                    {config.party_size > 0 && config.max_party_size > 0 && (
+                      <div className="text-[#b9bbbe] text-sm">
+                        ({config.party_size} of {config.max_party_size})
                       </div>
                     )}
+                    {config.timestamps && <ActivityTimestamp />}
                   </div>
                 </div>
+
+                {/* Buttons */}
+                {config.buttons && config.buttons.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {config.buttons.map((button, index) => (
+                      <div
+                        key={index}
+                        className="bg-[#4f545c] hover:bg-[#5d6269] text-white text-sm py-1.5 px-3 rounded text-center cursor-pointer transition-colors"
+                      >
+                        {button.label || `Button ${index + 1}`}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="p-6 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">
-                Preview updates automatically as you edit
-              </span>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-600 font-medium">Live Preview</span>
-              </div>
-            </div>
+        {/* Preview Info */}
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-zinc-400">
+            Preview updates automatically as you edit
+          </span>
+          <div className="flex items-center space-x-2">
+            <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-green-400 font-medium">Live Preview</span>
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mt-8 bg-white rounded-2xl shadow-lg p-6"
-        >
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">
-            Configuration Summary
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-medium text-gray-600">Client ID:</span>
-              <p className="text-gray-900 mt-1 font-mono">
-                {config.client_id || "Not set"}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Details:</span>
-              <p className="text-gray-900 mt-1">
-                {config.details || "Not set"}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">State:</span>
-              <p className="text-gray-900 mt-1">{config.state || "Not set"}</p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Party:</span>
-              <p className="text-gray-900 mt-1">
-                {config.party_size > 0 && config.max_party_size > 0
-                  ? `${config.party_size}/${config.max_party_size}`
-                  : "Not set"}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Buttons:</span>
-              <p className="text-gray-900 mt-1">
-                {config.buttons?.length || 0} configured
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">Images:</span>
-              <p className="text-gray-900 mt-1">
-                {
-                  [config.large_image, config.small_image].filter(Boolean)
-                    .length
-                }{" "}
-                configured
-              </p>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

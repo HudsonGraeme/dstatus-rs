@@ -9,6 +9,7 @@ export interface Config {
   party_size: number;
   max_party_size: number;
   buttons?: Button[];
+  timestamps?: boolean;
 }
 
 export interface Button {

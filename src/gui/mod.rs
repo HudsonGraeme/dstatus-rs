@@ -31,9 +31,37 @@ async fn save_config(config: Config, state: State<'_, AppState>) -> Result<(), S
         *app_config = config.clone();
     }
 
-    let config_path = state.config_path.lock().unwrap();
-    config.save_to_file(config_path.to_str().unwrap())
+    // Extract the path and drop the guard before the await
+    let file_path = {
+        let config_path = state.config_path.lock().unwrap();
+        config_path.to_string_lossy().to_string()
+    };
+
+    config.save_to_file(&file_path)
         .map_err(|e| format!("Failed to save config: {}", e))?;
+
+    // Send SIGHUP to daemon to reload config (like CLI does)
+    reload_daemon_config().await?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn reload_daemon_config() -> Result<(), String> {
+    use std::fs;
+    use nix::sys::signal::{self, Signal};
+    use nix::unistd::Pid;
+
+    let config_dir = crate::get_config_dir();
+    let pid_path = config_dir.join("dstatus.pid");
+
+    if let Ok(pid_str) = fs::read_to_string(pid_path) {
+        if let Ok(pid_val) = pid_str.trim().parse() {
+            let pid = Pid::from_raw(pid_val);
+            signal::kill(pid, Signal::SIGHUP)
+                .map_err(|e| format!("Failed to reload daemon config: {}", e))?;
+        }
+    }
 
     Ok(())
 }
@@ -176,7 +204,8 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             preview_config,
             check_daemon_status,
             start_daemon,
-            stop_daemon
+            stop_daemon,
+            reload_daemon_config
         ])
         .setup(|_app| Ok(()))
         .run(generate_context!())

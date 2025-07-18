@@ -1,282 +1,384 @@
-import { motion } from "framer-motion";
-import { Plus, Save, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Button, Config } from "../types";
+import { Check, Plus, Save, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CSSTransition } from "react-transition-group";
+import { Config, Button as ConfigButton } from "../types";
+
+// InputField component is now defined outside to prevent re-creation on every render
+const InputField = ({
+  label,
+  name,
+  value,
+  placeholder,
+  type = "text",
+  description,
+  onChange,
+}: {
+  label: string;
+  name: keyof Config;
+  value: string | number;
+  placeholder: string;
+  type?: string;
+  description?: string;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+}) => (
+  <div className="space-y-2">
+    <label htmlFor={name} className="block text-sm font-semibold text-zinc-200">
+      {label}
+    </label>
+    <input
+      type={type}
+      id={name}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full rounded-lg border border-zinc-700/50 bg-zinc-800/50 backdrop-blur-sm px-4 py-3 text-white placeholder-zinc-500 shadow-sm transition-all duration-200 focus:border-blue-500/50 focus:bg-zinc-800/80 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+    />
+    {description && <p className="text-xs text-zinc-400">{description}</p>}
+  </div>
+);
 
 interface ConfigEditorProps {
   config: Config;
   onSave: (config: Config) => void;
 }
 
-export default function ConfigEditor({ config, onSave }: ConfigEditorProps) {
-  const [editedConfig, setEditedConfig] = useState<Config>({ ...config });
-  const [saving, setSaving] = useState(false);
+export default function ConfigEditor({
+  config: initialConfig,
+  onSave,
+}: ConfigEditorProps) {
+  const [editConfig, setEditConfig] = useState<Config>(initialConfig);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const nodeRef = useRef(null);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave(editedConfig);
-    } finally {
-      setSaving(false);
-    }
+  // Check for changes whenever editConfig updates
+  useEffect(() => {
+    const hasChanges =
+      JSON.stringify(editConfig) !== JSON.stringify(initialConfig);
+    setHasChanges(hasChanges);
+  }, [editConfig, initialConfig]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const isNumber =
+      type === "number" || name === "party_size" || name === "max_party_size";
+    setEditConfig((prev) => ({
+      ...prev,
+      [name]: isNumber ? parseInt(value, 10) || 0 : value,
+    }));
   };
 
-  const updateField = (field: keyof Config, value: string | number) => {
-    setEditedConfig((prev) => ({ ...prev, [field]: value }));
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setEditConfig((prev) => ({ ...prev, [name]: checked }));
+  };
+
+  const handleButtonChange = (
+    index: number,
+    field: keyof ConfigButton,
+    value: string
+  ) => {
+    const buttons = [...(editConfig.buttons || [])];
+    buttons[index] = { ...buttons[index], [field]: value };
+    setEditConfig((prev) => ({ ...prev, buttons }));
   };
 
   const addButton = () => {
-    const buttons = editedConfig.buttons || [];
+    const buttons = editConfig.buttons || [];
     if (buttons.length < 2) {
-      setEditedConfig((prev) => ({
+      setEditConfig((prev) => ({
         ...prev,
         buttons: [...buttons, { label: "", url: "" }],
       }));
     }
   };
 
-  const updateButton = (index: number, field: keyof Button, value: string) => {
-    const buttons = [...(editedConfig.buttons || [])];
-    buttons[index] = { ...buttons[index], [field]: value };
-    setEditedConfig((prev) => ({ ...prev, buttons }));
-  };
-
   const removeButton = (index: number) => {
-    const buttons = editedConfig.buttons?.filter((_, i) => i !== index) || [];
-    setEditedConfig((prev) => ({
+    const buttons = editConfig.buttons?.filter((_, i) => i !== index) || [];
+    setEditConfig((prev) => ({
       ...prev,
       buttons: buttons.length > 0 ? buttons : undefined,
     }));
   };
 
-  const inputClasses =
-    "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200";
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      await onSave(editConfig);
+      setSaveSuccess(true);
+      setHasChanges(false);
+
+      // Reset success state after 2 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to save config:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setEditConfig(initialConfig);
+    setHasChanges(false);
+  };
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-8">
-        <div className="max-w-2xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                Application Settings
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Client ID
-                  </label>
-                  <input
-                    type="text"
-                    value={editedConfig.client_id}
-                    onChange={(e) => updateField("client_id", e.target.value)}
-                    className={inputClasses}
-                    placeholder="Your Discord application's client ID"
-                  />
-                </div>
-              </div>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div className="max-w-4xl space-y-8">
+          {/* Basic Configuration */}
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+            <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
+              Basic Configuration
+            </h3>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <InputField
+                label="Details"
+                name="details"
+                value={editConfig.details}
+                placeholder="What you're doing"
+                description="The main activity text"
+                onChange={handleChange}
+              />
+              <InputField
+                label="State"
+                name="state"
+                value={editConfig.state}
+                placeholder="Additional context"
+                description="Additional activity information"
+                onChange={handleChange}
+              />
+              <InputField
+                label="Client ID"
+                name="client_id"
+                value={editConfig.client_id}
+                placeholder="Discord application client ID"
+                description="Your Discord app's client ID"
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Images Configuration */}
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+            <h3 className="text-lg font-semibold text-white mb-6">Images</h3>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <InputField
+                label="Large Image"
+                name="large_image"
+                value={editConfig.large_image}
+                placeholder="large_image_key"
+                description="Image key from Discord app assets"
+                onChange={handleChange}
+              />
+              <InputField
+                label="Large Image Text"
+                name="large_text"
+                value={editConfig.large_text}
+                placeholder="Hover text for large image"
+                description="Text shown on hover"
+                onChange={handleChange}
+              />
+              <InputField
+                label="Small Image"
+                name="small_image"
+                value={editConfig.small_image}
+                placeholder="small_image_key"
+                description="Small overlay image key"
+                onChange={handleChange}
+              />
+              <InputField
+                label="Small Image Text"
+                name="small_text"
+                value={editConfig.small_text}
+                placeholder="Hover text for small image"
+                description="Text shown on hover"
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Party Configuration */}
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+            <h3 className="text-lg font-semibold text-white mb-6">Party</h3>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <InputField
+                label="Party Size"
+                name="party_size"
+                type="number"
+                value={editConfig.party_size}
+                placeholder="1"
+                description="Current party size"
+                onChange={handleChange}
+              />
+              <InputField
+                label="Max Party Size"
+                name="max_party_size"
+                type="number"
+                value={editConfig.max_party_size}
+                placeholder="4"
+                description="Maximum party size"
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Options */}
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+            <h3 className="text-lg font-semibold text-white mb-6">Options</h3>
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="timestamps"
+                name="timestamps"
+                checked={editConfig.timestamps}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500/20 focus:ring-2"
+              />
+              <label
+                htmlFor="timestamps"
+                className="text-sm font-medium text-zinc-200"
+              >
+                Show timestamps
+              </label>
+            </div>
+          </div>
+
+          {/* Buttons Configuration */}
+          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">Buttons</h3>
+              <button
+                onClick={addButton}
+                disabled={(editConfig.buttons?.length || 0) >= 2}
+                className="inline-flex items-center space-x-2 rounded-lg bg-zinc-700/60 hover:bg-zinc-600/60 border border-zinc-600/40 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Button</span>
+              </button>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                Rich Presence Content
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Details
-                  </label>
-                  <input
-                    type="text"
-                    value={editedConfig.details}
-                    onChange={(e) => updateField("details", e.target.value)}
-                    className={inputClasses}
-                    placeholder="What you're doing"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State
-                  </label>
-                  <input
-                    type="text"
-                    value={editedConfig.state}
-                    onChange={(e) => updateField("state", e.target.value)}
-                    className={inputClasses}
-                    placeholder="Additional info"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                Images
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Large Image
-                  </label>
-                  <input
-                    type="text"
-                    value={editedConfig.large_image}
-                    onChange={(e) => updateField("large_image", e.target.value)}
-                    className={inputClasses}
-                    placeholder="Image key or URL"
-                  />
-                  <input
-                    type="text"
-                    value={editedConfig.large_text}
-                    onChange={(e) => updateField("large_text", e.target.value)}
-                    className={`${inputClasses} mt-2`}
-                    placeholder="Large image hover text"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Small Image
-                  </label>
-                  <input
-                    type="text"
-                    value={editedConfig.small_image}
-                    onChange={(e) => updateField("small_image", e.target.value)}
-                    className={inputClasses}
-                    placeholder="Image key or URL"
-                  />
-                  <input
-                    type="text"
-                    value={editedConfig.small_text}
-                    onChange={(e) => updateField("small_text", e.target.value)}
-                    className={`${inputClasses} mt-2`}
-                    placeholder="Small image hover text"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                Party
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Party Size
-                  </label>
-                  <input
-                    type="number"
-                    value={editedConfig.party_size}
-                    onChange={(e) =>
-                      updateField("party_size", parseInt(e.target.value) || 0)
-                    }
-                    className={inputClasses}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max Party Size
-                  </label>
-                  <input
-                    type="number"
-                    value={editedConfig.max_party_size}
-                    onChange={(e) =>
-                      updateField(
-                        "max_party_size",
-                        parseInt(e.target.value) || 0
-                      )
-                    }
-                    className={inputClasses}
-                    min="0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Buttons</h3>
-                <button
-                  onClick={addButton}
-                  disabled={(editedConfig.buttons?.length || 0) >= 2}
-                  className="flex items-center space-x-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus size={16} />
-                  <span>Add Button</span>
-                </button>
-              </div>
-
-              {editedConfig.buttons?.map((button, index) => (
-                <motion.div
+            <div className="space-y-4">
+              {editConfig.buttons?.map((button, index) => (
+                <div
                   key={index}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="p-4 border border-gray-200 rounded-xl mb-3"
+                  className="rounded-lg border border-zinc-600/50 bg-zinc-700/30 p-4"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-medium text-gray-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-zinc-300">
                       Button {index + 1}
-                    </h4>
+                    </span>
                     <button
                       onClick={() => removeButton(index)}
-                      className="text-red-500 hover:text-red-700 p-1"
+                      className="rounded-md p-1 text-red-400 hover:bg-red-500/20 transition-colors"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <input
                       type="text"
                       value={button.label}
                       onChange={(e) =>
-                        updateButton(index, "label", e.target.value)
+                        handleButtonChange(index, "label", e.target.value)
                       }
-                      className={inputClasses}
-                      placeholder="Button label"
+                      placeholder="Button Label"
+                      className="w-full rounded-lg border border-zinc-600/50 bg-zinc-800/50 px-3 py-2 text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
                     />
                     <input
-                      type="url"
+                      type="text"
                       value={button.url}
                       onChange={(e) =>
-                        updateButton(index, "url", e.target.value)
+                        handleButtonChange(index, "url", e.target.value)
                       }
-                      className={inputClasses}
                       placeholder="Button URL"
+                      className="w-full rounded-lg border border-zinc-600/50 bg-zinc-800/50 px-3 py-2 text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
                     />
                   </div>
-                </motion.div>
+                </div>
               ))}
 
-              {!editedConfig.buttons?.length && (
-                <p className="text-gray-500 text-center py-8">
+              {!editConfig.buttons?.length && (
+                <div className="text-center py-8 text-zinc-400">
                   No buttons added. Click "Add Button" to create one.
-                </p>
+                </div>
               )}
             </div>
-          </motion.div>
+          </div>
+
+          {/* Extra padding at bottom for dynamic island */}
+          <div className="h-24" />
         </div>
       </div>
 
-      <div className="border-t border-gray-200 p-6 bg-white">
-        <div className="flex justify-end">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={18} />
-            <span>{saving ? "Saving..." : "Save Configuration"}</span>
-          </button>
+      {/* Dynamic Island Save Bar - Animation with react-transition-group */}
+      <CSSTransition
+        in={hasChanges}
+        nodeRef={nodeRef}
+        timeout={500}
+        classNames="dynamic-island"
+        unmountOnExit
+      >
+        <div
+          ref={nodeRef}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
+        >
+          <div className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-700/50 rounded-2xl px-8 py-4 shadow-2xl">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
+                <div className="h-2 w-2 bg-orange-400 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-zinc-200">
+                  Unsaved changes
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleReset}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-all duration-200 hover:scale-105 disabled:opacity-50"
+                >
+                  Reset
+                </button>
+
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="inline-flex items-center space-x-2 rounded-lg bg-zinc-700/80 hover:bg-zinc-600/80 border border-zinc-600/50 px-4 py-2 text-sm font-medium text-zinc-200 shadow-sm transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-zinc-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-zinc-300/30 border-t-zinc-300 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : saveSuccess ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>Saved!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </CSSTransition>
     </div>
   );
 }

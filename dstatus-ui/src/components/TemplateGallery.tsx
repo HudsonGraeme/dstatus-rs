@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { motion } from "framer-motion";
-import { Download, ExternalLink, Palette } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Template } from "../types";
 
@@ -15,197 +14,157 @@ export default function TemplateGallery({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTemplates();
+    const fetchTemplates = async () => {
+      try {
+        const fetchedTemplates = await invoke<Template[]>("load_templates");
+        setTemplates(fetchedTemplates);
+      } catch (error) {
+        console.error("Failed to load templates:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTemplates();
   }, []);
-
-  const loadTemplates = async () => {
-    try {
-      const loadedTemplates = await invoke<Template[]>("load_templates");
-      setTemplates(loadedTemplates);
-    } catch (error) {
-      console.error("Failed to load templates:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">Loading templates...</p>
+      <div className="max-w-6xl">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="h-64 rounded-xl bg-zinc-800/50 border border-zinc-700/50 animate-pulse"
+            />
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin p-8">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center space-x-3 mb-4">
-            <Palette className="text-blue-600" size={24} />
-            <h2 className="text-2xl font-bold text-gray-900">
-              Template Gallery
-            </h2>
-          </div>
-          <p className="text-gray-600">
-            Choose from our collection of pre-made Discord Rich Presence
-            templates
-          </p>
-        </motion.div>
+    <div className="max-w-6xl space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h3 className="text-2xl font-bold text-white">Template Gallery</h3>
+        <p className="text-zinc-400">
+          Choose from our collection of pre-made Discord Rich Presence templates
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template, index) => (
-            <motion.div
-              key={template.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {template.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {template.description}
-                    </p>
-                  </div>
-                </div>
+      {/* Templates Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {templates.map((template) => (
+          <div
+            key={template.name}
+            className="group rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm overflow-hidden transition-all duration-200 hover:scale-105 hover:border-zinc-600/50 hover:shadow-xl"
+          >
+            {/* Template Header */}
+            <div className="p-6 space-y-3">
+              <h4 className="text-lg font-semibold text-white group-hover:text-blue-300 transition-colors">
+                {template.name}
+              </h4>
+              <p className="text-sm text-zinc-400 line-clamp-2">
+                {template.description}
+              </p>
+            </div>
 
-                <div className="discord-preview rounded-lg p-4 mb-4 border border-gray-600">
-                  <div className="flex items-start space-x-3">
-                    {template.config.large_image && (
-                      <div className="flex-shrink-0 relative">
-                        <div className="w-12 h-12 bg-gray-600 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-400 text-xs text-center">
-                            {template.config.large_image}
-                          </span>
-                        </div>
-                        {template.config.small_image && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gray-600 rounded-full border border-gray-800 flex items-center justify-center">
-                            <span className="text-gray-400 text-xs">
-                              {template.config.small_image.slice(0, 1)}
-                            </span>
-                          </div>
-                        )}
+            {/* Template Preview */}
+            <div className="px-6 pb-4">
+              <div className="bg-[#36393f] border border-[#4f545c] rounded-lg p-3 text-xs">
+                <div className="flex items-start space-x-2">
+                  {template.config.large_image && (
+                    <div className="relative">
+                      <div className="w-8 h-8 bg-[#4f545c] rounded flex items-center justify-center text-[#72767d]">
+                        {template.config.large_image.slice(0, 2)}
                       </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-medium text-sm mb-1">
-                        {template.config.details}
-                      </div>
-                      {template.config.state && (
-                        <div className="text-gray-300 text-xs mb-1">
-                          {template.config.state}
-                        </div>
+                      {template.config.small_image && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#4f545c] rounded-full border border-[#36393f]" />
                       )}
-                      {template.config.party_size > 0 &&
-                        template.config.max_party_size > 0 && (
-                          <div className="text-gray-300 text-xs">
-                            ({template.config.party_size} of{" "}
-                            {template.config.max_party_size})
-                          </div>
-                        )}
                     </div>
-                  </div>
-
-                  {template.config.buttons &&
-                    template.config.buttons.length > 0 && (
-                      <div className="mt-3 space-y-1">
-                        {template.config.buttons.map((button, buttonIndex) => (
-                          <div
-                            key={buttonIndex}
-                            className="bg-gray-700 text-white text-xs py-1.5 px-3 rounded text-center"
-                          >
-                            {button.label}
-                          </div>
-                        ))}
+                  )}
+                  <div className="flex-1 space-y-0.5">
+                    <div className="text-white font-medium text-xs">
+                      {template.config.details || "No details"}
+                    </div>
+                    {template.config.state && (
+                      <div className="text-[#b9bbbe] text-xs">
+                        {template.config.state}
                       </div>
                     )}
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => onLoadTemplate(template)}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                  >
-                    <Download size={16} />
-                    <span>Use This Template</span>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-gray-50 p-2 rounded-lg">
-                      <span className="text-gray-600">Buttons:</span>
-                      <span className="text-gray-900 ml-1 font-medium">
-                        {template.config.buttons?.length || 0}
-                      </span>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded-lg">
-                      <span className="text-gray-600">Images:</span>
-                      <span className="text-gray-900 ml-1 font-medium">
-                        {
-                          [
-                            template.config.large_image,
-                            template.config.small_image,
-                          ].filter(Boolean).length
-                        }
-                      </span>
-                    </div>
+                    <div className="text-[#72767d] text-xs">00:01 elapsed</div>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            </div>
 
-        {templates.length === 0 && !loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <Palette className="text-gray-400 mx-auto mb-4" size={48} />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No templates found
-            </h3>
-            <p className="text-gray-600">
-              Check your connection and try again later.
-            </p>
-          </motion.div>
-        )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-100"
-        >
-          <div className="flex items-start space-x-4">
-            <ExternalLink className="text-blue-600 mt-1" size={24} />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Want more templates?
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Browse our online collection of community-created templates and
-                download them directly to your app.
-              </p>
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
-                Browse Online Gallery
+            {/* Template Footer */}
+            <div className="p-6 pt-0 space-y-3">
+              <div className="flex justify-between text-xs text-zinc-400">
+                <span>{template.config.buttons?.length || 0} buttons</span>
+                <span>
+                  {
+                    [
+                      template.config.large_image,
+                      template.config.small_image,
+                    ].filter(Boolean).length
+                  }{" "}
+                  images
+                </span>
+              </div>
+              <button
+                onClick={() => onLoadTemplate(template)}
+                className="w-full flex items-center justify-center space-x-2 rounded-lg bg-zinc-700/60 hover:bg-zinc-600/60 border border-zinc-600/40 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-all duration-200 hover:scale-105 group-hover:bg-zinc-600/70"
+              >
+                <Download className="h-4 w-4" />
+                <span>Use Template</span>
               </button>
             </div>
           </div>
-        </motion.div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {templates.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <div className="space-y-4">
+            <div className="h-16 w-16 mx-auto rounded-full bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
+              <ExternalLink className="h-8 w-8 text-zinc-500" />
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-lg font-semibold text-white">
+                No templates found
+              </h4>
+              <p className="text-zinc-400">
+                Check your connection and try again later.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call to Action */}
+      <div className="rounded-xl border border-blue-500/30 bg-gradient-to-r from-blue-600/10 to-purple-600/10 backdrop-blur-sm p-6">
+        <div className="flex items-start space-x-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 border border-blue-500/30">
+            <ExternalLink className="h-6 w-6 text-blue-400" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-lg font-semibold text-white">
+                Want more templates?
+              </h4>
+              <p className="text-zinc-400">
+                Browse our online collection of community-created templates and
+                download them directly to your app.
+              </p>
+            </div>
+            <button className="inline-flex items-center space-x-2 rounded-lg bg-zinc-700/60 hover:bg-zinc-600/60 border border-zinc-600/40 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:scale-105">
+              <ExternalLink className="h-4 w-4" />
+              <span>Browse Online Gallery</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

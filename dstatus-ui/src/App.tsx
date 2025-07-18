@@ -1,16 +1,27 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Eye, Palette, Settings } from "lucide-react";
+import { Activity, Eye, Loader, Palette, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import ConfigEditor from "./components/ConfigEditor";
 import DaemonStatus from "./components/DaemonStatus";
 import DiscordPreview from "./components/DiscordPreview";
 import TemplateGallery from "./components/TemplateGallery";
+import { cn } from "./lib/utils";
 import { Config, Template } from "./types";
 
 type Tab = "config" | "preview" | "templates" | "status";
 
-function App() {
+const tabs: {
+  id: Tab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "config", label: "Configuration", icon: Settings },
+  { id: "preview", label: "Preview", icon: Eye },
+  { id: "templates", label: "Templates", icon: Palette },
+  { id: "status", label: "Daemon Status", icon: Activity },
+];
+
+export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("config");
   const [loading, setLoading] = useState(true);
@@ -46,104 +57,109 @@ function App() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center space-y-4"
-        >
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600 font-medium">Loading DStatus...</p>
-        </motion.div>
+      <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader className="h-10 w-10 animate-spin text-blue-500" />
+          <p className="text-lg font-medium text-zinc-400">
+            Loading DStatus...
+          </p>
+        </div>
       </div>
     );
   }
 
-  const tabs = [
-    { id: "config" as Tab, label: "Configuration", icon: Settings },
-    { id: "preview" as Tab, label: "Preview", icon: Eye },
-    { id: "templates" as Tab, label: "Templates", icon: Palette },
-    { id: "status" as Tab, label: "Status", icon: Activity },
-  ];
-
   return (
-    <div className="h-screen bg-gray-50 flex">
-      <div className="w-80 bg-white shadow-lg flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">D</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">DStatus</h1>
-              <p className="text-sm text-gray-500">Discord Rich Presence</p>
-            </div>
+    <div className="flex h-screen bg-zinc-900 text-white overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 flex flex-col border-r border-zinc-800 bg-zinc-950/70 backdrop-blur-xl">
+        {/* Header */}
+        <div className="flex flex-col items-center px-6 py-8 border-b border-zinc-800/50">
+          <pre className="text-purple-400 text-[5px] leading-tight font-mono">
+            {`
+██████╗ ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
+██╔══██╗██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║   ██║██╔════╝
+██║  ██║███████╗   ██║   ███████║   ██║   ██║   ██║███████╗
+██║  ██║╚════██║   ██║   ██╔══██║   ██║   ██║   ██║╚════██║
+██████╔╝███████║   ██║   ██║  ██║   ██║   ╚██████╔╝███████║
+╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝
+            `}
+          </pre>
+          <div className="mt-2 text-center">
+            <code className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">
+              v0.1.0
+            </code>
           </div>
         </div>
 
-        <nav className="flex-1 p-4">
-          <div className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6">
+          <ul className="space-y-2">
+            {tabs.map((tab) => (
+              <li key={tab.id}>
                 <button
-                  key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={cn(
+                    "flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200",
                     activeTab === tab.id
-                      ? "bg-blue-50 text-blue-700 shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
+                      ? "bg-blue-500/15 text-blue-300 shadow-sm border border-blue-500/20"
+                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                  )}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{tab.label}</span>
+                  <tab.icon
+                    className={cn(
+                      "h-5 w-5 transition-colors",
+                      activeTab === tab.id ? "text-blue-400" : "text-zinc-500"
+                    )}
+                  />
+                  <span>{tab.label}</span>
                 </button>
-              );
-            })}
-          </div>
+              </li>
+            ))}
+          </ul>
         </nav>
 
-        <DaemonStatus />
-      </div>
+        {/* Footer Status */}
+        <div className="p-4 border-t border-zinc-800/50">
+          <DaemonStatus />
+        </div>
+      </aside>
 
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white shadow-sm border-b border-gray-200 px-8 py-6">
-          <h2 className="text-2xl font-semibold text-gray-900">
-            {tabs.find((t) => t.id === activeTab)?.label}
-          </h2>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col bg-zinc-900 overflow-hidden">
+        {/* Header */}
+        <header className="border-b border-zinc-800/50 bg-zinc-950/30 backdrop-blur-xl px-8 py-6 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold tracking-tight">
+              {tabs.find((t) => t.id === activeTab)?.label}
+            </h2>
+            <div className="h-3 w-3 rounded-full bg-green-400 shadow-sm animate-pulse" />
+          </div>
         </header>
 
-        <main className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              {activeTab === "config" && config && (
-                <ConfigEditor config={config} onSave={saveConfig} />
-              )}
-              {activeTab === "preview" && config && (
-                <DiscordPreview config={config} />
-              )}
-              {activeTab === "templates" && (
-                <TemplateGallery onLoadTemplate={loadTemplate} />
-              )}
-              {activeTab === "status" && (
-                <div className="p-8">
-                  <h3 className="text-lg font-semibold mb-4">Daemon Status</h3>
-                  <DaemonStatus />
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+        {/* Content Area */}
+        <div className="flex-1 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800/50 overflow-hidden">
+          {activeTab === "config" && config && (
+            <ConfigEditor config={config} onSave={saveConfig} />
+          )}
+          {activeTab === "preview" && config && (
+            <div className="h-full overflow-y-auto p-8">
+              <DiscordPreview config={config} />
+            </div>
+          )}
+          {activeTab === "templates" && (
+            <div className="h-full overflow-y-auto p-8">
+              <TemplateGallery onLoadTemplate={loadTemplate} />
+            </div>
+          )}
+          {activeTab === "status" && (
+            <div className="h-full overflow-y-auto p-8">
+              <div className="max-w-2xl">
+                <DaemonStatus />
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
-
-export default App;
