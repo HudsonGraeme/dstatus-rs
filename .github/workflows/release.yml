@@ -113,7 +113,7 @@ jobs:
           echo "Stapling .app bundle..."
           for i in {1..5}; do
             echo "Attempt $i to staple..."
-            if xcrun stapler staple -v "$APP_BUNDLE_NAME"; then
+            if xcrun stapler staple "$APP_BUNDLE_NAME"; then
               echo "Stapling successful."
               break
             fi
