@@ -18,6 +18,9 @@ Stops the Rich Presence daemon by sending a SIGTERM signal to the running proces
 .B configure
 Opens a terminal user interface to create or modify the configuration file. Automatically reloads the daemon configuration if it's running.
 .TP
+.B load \fIPATH\fR
+Loads a configuration file from the specified path and saves it as the active configuration. Validates the file format and automatically reloads the daemon configuration if it's running.
+.TP
 .B logs
 Displays the daemon logs from the log file.
 .TP
@@ -83,6 +86,9 @@ Start the daemon:
 .TP
 Configure Rich Presence settings:
 .B dstatus configure
+.TP
+Load a configuration file:
+.B dstatus load ~/Downloads/my-config.toml
 .TP
 Stop the daemon:
 .B dstatus off

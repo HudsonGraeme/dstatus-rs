@@ -95,6 +95,11 @@ enum Commands {
     Off,
     /// Creates a new configuration file
     Configure,
+    /// Loads a configuration file from the specified path
+    Load {
+        /// Path to the configuration.toml file to load
+        path: PathBuf,
+    },
     /// Shows the daemon logs
     Logs,
     /// Updates dstatus to the latest version
@@ -178,6 +183,36 @@ fn main() {
             }
 
             println!("Configuration saved to {:?}", config_file);
+        }
+        Commands::Load { path } => {
+            if !path.exists() {
+                eprintln!("Error: Configuration file '{}' does not exist", path.display());
+                std::process::exit(1);
+            }
+
+            match Config::from_file(path.to_str().unwrap()) {
+                Ok(config) => {
+                    let config_file = get_config_dir().join("configuration.toml");
+
+                    if let Err(e) = config.save_to_file(config_file.to_str().unwrap()) {
+                        eprintln!("Error: Failed to save configuration: {}", e);
+                        std::process::exit(1);
+                    }
+
+                    if let Ok(pid_str) = fs::read_to_string(get_pid_path()) {
+                        if let Ok(pid_val) = pid_str.trim().parse() {
+                            let pid = Pid::from_raw(pid_val);
+                            let _ = signal::kill(pid, Signal::SIGHUP);
+                        }
+                    }
+
+                    println!("Configuration loaded from '{}' and saved to {:?}", path.display(), config_file);
+                }
+                Err(e) => {
+                    eprintln!("Error: Failed to parse configuration file '{}': {}", path.display(), e);
+                    std::process::exit(1);
+                }
+            }
         }
         Commands::Logs => {
             let log_path = get_log_path();
