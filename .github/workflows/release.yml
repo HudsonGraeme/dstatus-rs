@@ -32,6 +32,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libgdk-pixbuf2.0-dev libcairo2-dev libpango1.0-dev libatk1.0-dev libgdk-pixbuf-xlib-2.0-dev libgdk-pixbuf2.0-dev
+
       - name: Update Cargo.toml version
         run: |
           # Extract version from tag (remove 'v' prefix)

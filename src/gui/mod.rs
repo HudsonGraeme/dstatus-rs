@@ -1,7 +1,7 @@
 use tauri::{generate_context, generate_handler, State};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use crate::config::{Config, Button};
+use crate::config::{Config};
 use std::path::PathBuf;
 
 
@@ -66,56 +66,46 @@ async fn reload_daemon_config() -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Deserialize)]
+struct Manifest {
+    templates: Vec<String>,
+}
+
 #[tauri::command]
 async fn load_templates() -> Result<Vec<Template>, String> {
-    Ok(vec![
-        Template {
-            name: "Gaming".to_string(),
-            description: "Perfect for gaming sessions".to_string(),
-            config: Config {
-                client_id: "1234567890".to_string(),
-                details: "Playing a game".to_string(),
-                state: "In match".to_string(),
-                large_image: "game_logo".to_string(),
-                large_text: "Game Name".to_string(),
-                small_image: "status_icon".to_string(),
-                small_text: "Online".to_string(),
-                party_size: 1,
-                max_party_size: 4,
-                buttons: Some(vec![
-                    Button {
-                        label: "Join Game".to_string(),
-                        url: "https://example.com/join".to_string(),
-                    }
-                ]),
-            },
-        },
-        Template {
-            name: "Streaming".to_string(),
-            description: "Live streaming setup".to_string(),
-            config: Config {
-                client_id: "1234567890".to_string(),
-                details: "Live on Twitch".to_string(),
-                state: "Streaming".to_string(),
-                large_image: "streaming_logo".to_string(),
-                large_text: "Live Stream".to_string(),
-                small_image: "live_icon".to_string(),
-                small_text: "Broadcasting".to_string(),
-                party_size: 0,
-                max_party_size: 0,
-                buttons: Some(vec![
-                    Button {
-                        label: "Watch Stream".to_string(),
-                        url: "https://twitch.tv/username".to_string(),
-                    },
-                    Button {
-                        label: "Follow".to_string(),
-                        url: "https://twitch.tv/username".to_string(),
-                    }
-                ]),
-            },
-        },
-    ])
+    let manifest_url = "https://template.dstatus.rs/manifest.toml";
+
+    // Fetch the manifest file
+    let manifest_content = reqwest::get(manifest_url)
+        .await
+        .map_err(|e| format!("Failed to download manifest: {}", e))?
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read manifest content: {}", e))?;
+
+    // Parse the manifest
+    let manifest: Manifest = toml::from_str(&manifest_content)
+        .map_err(|e| format!("Failed to parse manifest: {}", e))?;
+
+    // Fetch each template from the URLs in the manifest
+    let mut templates = vec![];
+    for pathname in manifest.templates {
+        let url = format!("https://template.dstatus.rs/{}.toml", pathname);
+        let config = load_config_from_source(url.clone()).await?;
+        let name = if config.name.is_empty() {
+            pathname
+        } else {
+            config.name.clone()
+        };
+        let template = Template {
+            name,
+            description: config.description.clone(),
+            config,
+        };
+        templates.push(template);
+    }
+
+    Ok(templates)
 }
 
 #[tauri::command]
@@ -205,6 +195,8 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = Config::from_file(config_file.to_str().unwrap()).unwrap_or_else(|_| {
         Config {
+            name: "".to_string(),
+            description: "".to_string(),
             client_id: "".to_string(),
             details: "".to_string(),
             state: "".to_string(),

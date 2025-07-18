@@ -8,8 +8,12 @@ pub struct Button {
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Config {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
     pub client_id: String,
     pub details: String,
     pub state: String,

@@ -186,6 +186,8 @@ fn main_cli() {
             let config_file = get_config_dir().join("configuration.toml");
             let config = Config::from_file(config_file.to_str().unwrap()).unwrap_or_else(|_| {
                 Config {
+                    name: "".to_string(),
+                    description: "".to_string(),
                     client_id: "".to_string(),
                     details: "".to_string(),
                     state: "".to_string(),

@@ -70,7 +70,7 @@ export default function TemplateGallery({
           >
             {/* Template Header */}
             <div className="p-6 space-y-3">
-              <h4 className="text-lg font-semibold text-white group-hover:text-blue-300 transition-colors">
+              <h4 className="text-lg font-semibold text-white">
                 {template.name}
               </h4>
               <p className="text-sm text-zinc-400 line-clamp-2">
