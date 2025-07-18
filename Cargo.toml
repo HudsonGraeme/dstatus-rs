@@ -11,6 +11,10 @@ repository = "https://github.com/HudsonGraeme/dstatus-rs"
 name = "dstatus"
 path = "src/main.rs"
 
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive", "env"] }
@@ -27,6 +31,27 @@ ratatui = { version = "0.27.0", features = ["all-widgets"] }
 crossterm = "0.27.0"
 unicode-width = "0.1.14"
 signal-hook = "0.3.18"
+
+# Tauri dependencies
+tauri = { version = "1.6", features = [
+    "dialog-open",
+    "dialog-save",
+    "fs-create-dir",
+    "fs-exists",
+    "fs-read-dir",
+    "fs-read-file",
+    "fs-write-file",
+    "http-all",
+    "notification-all",
+    "os-all",
+    "shell-open",
+
+    "devtools",
+] }
+tokio = { version = "1.0", features = ["full"] }
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.28", features = ["signal"] }

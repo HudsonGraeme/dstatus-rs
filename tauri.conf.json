@@ -1,0 +1,93 @@
+{
+    "build": {
+        "beforeBuildCommand": "cd dstatus-ui && npm run build",
+        "beforeDevCommand": "cd dstatus-ui && npm run dev",
+        "devPath": "http://localhost:5173",
+        "distDir": "./dstatus-ui/dist"
+    },
+    "package": {
+        "productName": "DStatus",
+        "version": "0.1.0"
+    },
+    "tauri": {
+        "allowlist": {
+            "all": false,
+            "shell": {
+                "all": false,
+                "open": true
+            },
+            "dialog": {
+                "all": false,
+                "open": true,
+                "save": true
+            },
+            "fs": {
+                "all": false,
+                "readFile": true,
+                "writeFile": true,
+                "readDir": true,
+                "createDir": true,
+                "exists": true
+            },
+            "http": {
+                "all": true,
+                "request": true
+            },
+            "notification": {
+                "all": true
+            },
+            "os": {
+                "all": true
+            }
+        },
+        "bundle": {
+            "active": true,
+            "category": "Utility",
+            "copyright": "",
+            "deb": {
+                "depends": []
+            },
+            "externalBin": [],
+            "icon": [],
+            "identifier": "com.hudsongraeme.dstatus",
+            "longDescription": "Discord status manager with rich presence customization",
+            "macOS": {
+                "entitlements": null,
+                "exceptionDomain": "",
+                "frameworks": [],
+                "providerShortName": null,
+                "signingIdentity": null
+            },
+            "resources": [],
+            "shortDescription": "Discord status manager",
+            "targets": "all",
+            "windows": {
+                "certificateThumbprint": null,
+                "digestAlgorithm": "sha256",
+                "timestampUrl": ""
+            }
+        },
+        "security": {
+            "csp": null
+        },
+        "updater": {
+            "active": false
+        },
+        "windows": [
+            {
+                "fullscreen": false,
+                "height": 700,
+                "resizable": true,
+                "title": "DStatus",
+                "width": 1000,
+                "minWidth": 800,
+                "minHeight": 600,
+                "titleBarStyle": "Overlay",
+                "decorations": true,
+                "transparent": false,
+                "alwaysOnTop": false,
+                "center": true
+            }
+        ]
+    }
+}

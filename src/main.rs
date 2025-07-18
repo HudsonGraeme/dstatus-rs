@@ -3,6 +3,7 @@ mod rich_presence;
 mod stream_manager;
 mod config;
 mod tui;
+mod gui;
 
 use clap::{Parser, Subcommand};
 use dirs;
@@ -95,6 +96,8 @@ enum Commands {
     Off,
     /// Creates a new configuration file
     Configure,
+    /// Launch the graphical user interface
+    Gui,
     /// Loads a configuration file from the specified path or URL
     Load {
         /// Path to the configuration.toml file to load or URL to download from
@@ -111,6 +114,31 @@ enum Commands {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+
+    // Check if launched from .app bundle (macOS)
+    let is_app_bundle = std::env::current_exe()
+        .map(|path| path.to_string_lossy().contains(".app/Contents/MacOS/"))
+        .unwrap_or(false);
+
+    // Show GUI if:
+    // 1. Launched from .app bundle, OR
+    // 2. Explicitly requested with "gui" command
+    if is_app_bundle || (args.len() > 1 && args[1] == "gui") {
+        main_gui();
+    } else {
+        main_cli();
+    }
+}
+
+fn main_gui() {
+    if let Err(e) = gui::run_gui() {
+        eprintln!("Failed to start GUI: {}", e);
+        std::process::exit(1);
+    }
+}
+
+fn main_cli() {
     display_banner();
     let args = Args::parse();
 
@@ -183,6 +211,12 @@ fn main() {
             }
 
             println!("Configuration saved to {:?}", config_file);
+        }
+        Commands::Gui => {
+            if let Err(e) = gui::run_gui() {
+                eprintln!("Failed to start GUI: {}", e);
+                std::process::exit(1);
+            }
         }
         Commands::Load { source } => {
             let toml_content = if source.starts_with("http://") || source.starts_with("https://") {
