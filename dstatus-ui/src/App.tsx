@@ -51,7 +51,7 @@ export default function App() {
   };
 
   const loadTemplate = (template: Template) => {
-    setConfig(template.config);
+    saveConfig(template.config);
     setActiveTab("config");
   };
 

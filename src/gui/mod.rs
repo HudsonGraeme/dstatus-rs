@@ -171,6 +171,34 @@ async fn stop_daemon() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn load_config_from_source(source: String) -> Result<Config, String> {
+    let toml_content = if source.starts_with("http://") || source.starts_with("https://") {
+        reqwest::get(&source)
+            .await
+            .map_err(|e| format!("Failed to download from '{}': {}", source, e))?
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response from '{}': {}", source, e))?
+    } else {
+        tokio::fs::read_to_string(&source)
+            .await
+            .map_err(|e| format!("Failed to read configuration file '{}': {}", source, e))?
+    };
+
+    let mut config: Config = toml::from_str(&toml_content)
+        .map_err(|e| format!("Failed to parse TOML from '{}': {}", source, e))?;
+
+    if let Some(buttons) = &mut config.buttons {
+        if buttons.len() > 2 {
+            buttons.truncate(2);
+        }
+    }
+
+    Ok(config)
+}
+
+
 pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
     let config_dir = crate::get_config_dir();
     let config_file = config_dir.join("configuration.toml");
@@ -205,7 +233,8 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             check_daemon_status,
             start_daemon,
             stop_daemon,
-            reload_daemon_config
+            reload_daemon_config,
+            load_config_from_source
         ])
         .setup(|_app| Ok(()))
         .run(generate_context!())

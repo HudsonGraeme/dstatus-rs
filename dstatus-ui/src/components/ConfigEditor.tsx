@@ -54,13 +54,19 @@ export default function ConfigEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const nodeRef = useRef(null);
+  const savedConfigRef = useRef<Config>(initialConfig);
 
-  // Check for changes whenever editConfig updates
+  // Sync internal state with prop changes when a new template is loaded
+  useEffect(() => {
+    setEditConfig(initialConfig);
+  }, [initialConfig]);
+
+  // Check for changes against the last known saved state
   useEffect(() => {
     const hasChanges =
-      JSON.stringify(editConfig) !== JSON.stringify(initialConfig);
+      JSON.stringify(editConfig) !== JSON.stringify(savedConfigRef.current);
     setHasChanges(hasChanges);
-  }, [editConfig, initialConfig]);
+  }, [editConfig, savedConfigRef]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -113,6 +119,7 @@ export default function ConfigEditor({
 
     try {
       await onSave(editConfig);
+      savedConfigRef.current = editConfig; // Update the saved state reference
       setSaveSuccess(true);
       setHasChanges(false);
 
@@ -128,7 +135,7 @@ export default function ConfigEditor({
   };
 
   const handleReset = () => {
-    setEditConfig(initialConfig);
+    setEditConfig(savedConfigRef.current); // Reset to the last saved state
     setHasChanges(false);
   };
 
