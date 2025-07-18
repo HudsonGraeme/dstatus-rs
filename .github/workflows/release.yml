@@ -52,6 +52,22 @@ jobs:
           echo "Updated Cargo.toml version:"
           grep "^version" Cargo.toml
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.13.1
+
+      - name: Build UI
+        run: |
+          cd dstatus-ui
+          pnpm install
+          pnpm run build
+
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
 
