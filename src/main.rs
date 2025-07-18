@@ -48,6 +48,39 @@ fn get_log_path() -> PathBuf {
     get_config_dir().join("dstatus.log")
 }
 
+fn install_man_page() {
+    let man_content = include_str!("../dstatus.1");
+
+    let mut man_dir = dirs::home_dir().expect("Failed to find home directory");
+    man_dir.push(".local");
+    man_dir.push("share");
+    man_dir.push("man");
+    man_dir.push("man1");
+
+    if let Err(e) = fs::create_dir_all(&man_dir) {
+        eprintln!("Failed to create man directory: {}", e);
+        std::process::exit(1);
+    }
+
+    let man_file = man_dir.join("dstatus.1");
+    if let Err(e) = fs::write(&man_file, man_content) {
+        eprintln!("Failed to write man page: {}", e);
+        std::process::exit(1);
+    }
+
+    println!("Man page installed to: {}", man_file.display());
+    println!("You can now run: man dstatus");
+
+    let manpath = std::env::var("MANPATH").unwrap_or_default();
+    let local_man_path = format!("{}/.local/share/man", dirs::home_dir().unwrap().display());
+
+    if !manpath.contains(&local_man_path) {
+        println!();
+        println!("Note: To ensure 'man dstatus' works, add this to your shell profile:");
+        println!("export MANPATH=\"$HOME/.local/share/man:$MANPATH\"");
+    }
+}
+
 #[derive(Parser)]
 struct Args {
     #[command(subcommand)]
@@ -66,6 +99,8 @@ enum Commands {
     Logs,
     /// Updates dstatus to the latest version
     Update,
+    /// Installs the man page to user-local directory
+    InstallMan,
     #[command(hide = true)]
     InternalRun,
 }
@@ -197,6 +232,9 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+        Commands::InstallMan => {
+            install_man_page();
         }
         Commands::InternalRun => {
             if let Err(e) = run() {

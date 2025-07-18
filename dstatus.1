@@ -1,0 +1,114 @@
+.TH DSTATUS 1 "2024" "dstatus 0.1.0" "User Commands"
+.SH NAME
+dstatus \- Discord Rich Presence status manager
+.SH SYNOPSIS
+.B dstatus
+.IR COMMAND
+.SH DESCRIPTION
+.B dstatus
+is a Discord Rich Presence status manager that allows you to set custom "Playing..." status in Discord. It runs as a daemon process and can be configured through a terminal user interface.
+.SH COMMANDS
+.TP
+.B on
+Starts the Rich Presence daemon. Creates a PID file and runs the daemon in the background.
+.TP
+.B off
+Stops the Rich Presence daemon by sending a SIGTERM signal to the running process.
+.TP
+.B configure
+Opens a terminal user interface to create or modify the configuration file. Automatically reloads the daemon configuration if it's running.
+.TP
+.B logs
+Displays the daemon logs from the log file.
+.TP
+.B update
+Updates dstatus to the latest version by downloading and executing the install script from the GitHub repository.
+.TP
+.B install-man
+Installs the man page to the user-local directory (~/.local/share/man/man1/). Does not require root privileges.
+.SH FILES
+.TP
+.I ~/.config/dstatus/configuration.toml
+Main configuration file containing Discord application settings and Rich Presence details.
+.TP
+.I ~/.config/dstatus/dstatus.pid
+Process ID file for the running daemon.
+.TP
+.I ~/.config/dstatus/dstatus.log
+Log file containing daemon output and error messages.
+.SH CONFIGURATION
+The configuration file uses TOML format and contains the following fields:
+.TP
+.B client_id
+Discord application client ID
+.TP
+.B details
+Main status text displayed in Rich Presence
+.TP
+.B state
+Secondary status text displayed in Rich Presence
+.TP
+.B large_image
+Large image asset key for Rich Presence
+.TP
+.B large_text
+Tooltip text for the large image
+.TP
+.B small_image
+Small image asset key for Rich Presence
+.TP
+.B small_text
+Tooltip text for the small image
+.TP
+.B party_size
+Current party size (optional)
+.TP
+.B max_party_size
+Maximum party size (optional)
+.TP
+.B buttons
+Array of buttons to display in Rich Presence (optional)
+.SH SIGNALS
+The daemon responds to the following signals:
+.TP
+.B SIGHUP
+Reloads the configuration file without restarting the daemon.
+.TP
+.B SIGTERM
+Gracefully shuts down the daemon.
+.SH EXAMPLES
+.TP
+Start the daemon:
+.B dstatus on
+.TP
+Configure Rich Presence settings:
+.B dstatus configure
+.TP
+Stop the daemon:
+.B dstatus off
+.TP
+View daemon logs:
+.B dstatus logs
+.TP
+Update to latest version:
+.B dstatus update
+.TP
+Install man page:
+.B dstatus install-man
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error (configuration error, daemon failure, etc.)
+.SH AUTHOR
+Written by HudsonGraeme.
+.SH REPORTING BUGS
+Report bugs at: https://github.com/HudsonGraeme/dstatus-rs/issues
+.SH COPYRIGHT
+This is free software licensed under the MIT License.
+.SH SEE ALSO
+.BR systemctl (1),
+.BR kill (1),
+.BR discord (1)

@@ -22,3 +22,11 @@ chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 echo ""
 echo "${BINARY_NAME} installed successfully!"
 echo "Now, run 'dstatus configure' to set it up."
+
+# Install man page
+echo "Installing man page..."
+if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
+    "${BINARY_NAME}" install-man
+else
+    echo "Warning: Could not install man page automatically. Run 'dstatus install-man' later."
+fi
