@@ -6,29 +6,8 @@ on:
       - 'v*.*.*'
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref_name }}
-          body: "Automated release of dstatus-rs."
-          draft: false
-          prerelease: false
-
   build-assets:
     name: Build Assets
-    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -48,11 +27,10 @@ jobs:
       APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
+          targets: ${{ matrix.target }}
 
       - name: Update Cargo.toml version
         run: |
@@ -66,9 +44,6 @@ jobs:
           # Verify the change
           echo "Updated Cargo.toml version:"
           grep "^version" Cargo.toml
-
-      - name: Install target
-        run: rustup target add ${{ matrix.target }}
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
@@ -165,11 +140,9 @@ jobs:
           echo "ASSET_PATH=${ASSET_NAME}.tar.gz" >> $GITHUB_ENV
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.ASSET_PATH }}
-          asset_name: ${{ env.ASSET_PATH }}
-          asset_content_type: application/octet-stream
+          files: ${{ env.ASSET_PATH }}
+          body: "Automated release of dstatus-rs."
+          draft: false
+          prerelease: false
