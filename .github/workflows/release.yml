@@ -6,8 +6,26 @@ on:
       - 'v*.*.*'
 
 jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: "Automated release of dstatus-rs."
+          draft: false
+          prerelease: false
+
   build-assets:
     name: Build Assets
+    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -166,6 +184,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.ASSET_PATH }}
-          body: "Automated release of dstatus-rs."
-          draft: false
-          prerelease: false
