@@ -14,7 +14,7 @@
 ## Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/HudsonGraeme/dstatus-rs/main/scripts/install.sh | bash
+curl -sSL https://install.dstatus.rs | bash
 ```
 
 ## Usage

@@ -114,9 +114,13 @@ jobs:
 
           # Create the .app bundle structure
           mkdir -p "$MACOS_DIR"
+          mkdir -p "${CONTENTS_DIR}/Resources"
 
           # Copy the executable
           cp "$TARGET_BINARY_PATH" "$MACOS_DIR/"
+
+          # Copy the icon
+          cp "icons/icon.icns" "${CONTENTS_DIR}/Resources/"
 
           # Create a minimal Info.plist
           VERSION=$(grep '^version' Cargo.toml | head -n 1 | awk -F '"' '{print $2}')
@@ -137,6 +141,8 @@ jobs:
               <string>${VERSION}</string>
               <key>CFBundlePackageType</key>
               <string>APPL</string>
+              <key>CFBundleIconFile</key>
+              <string>icon</string>
           </dict>
           </plist>
           EOF
