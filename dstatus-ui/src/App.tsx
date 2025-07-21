@@ -1,12 +1,21 @@
+import { open } from "@tauri-apps/api/shell";
 import { invoke } from "@tauri-apps/api/tauri";
-import { Activity, Eye, Loader, Palette, Settings } from "lucide-react";
+import {
+  Activity,
+  Download,
+  Eye,
+  Loader,
+  Palette,
+  Settings,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import ConfigEditor from "./components/ConfigEditor";
 import DaemonStatus from "./components/DaemonStatus";
 import DiscordPreview from "./components/DiscordPreview";
 import TemplateGallery from "./components/TemplateGallery";
 import { cn } from "./lib/utils";
-import { Config, Template } from "./types";
+import { Config, Template, UpdateInfo } from "./types";
 
 type Tab = "config" | "preview" | "templates" | "status";
 
@@ -25,9 +34,14 @@ export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("config");
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState<string>("0.1.0");
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
 
   useEffect(() => {
     loadConfig();
+    loadVersion();
+    checkForUpdates();
   }, []);
 
   const loadConfig = async () => {
@@ -38,6 +52,31 @@ export default function App() {
       console.error("Failed to load config:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadVersion = async () => {
+    try {
+      const appVersion = await invoke<string>("get_app_version");
+      setVersion(appVersion);
+    } catch (error) {
+      console.error("Failed to load version:", error);
+    }
+  };
+
+  const checkForUpdates = async () => {
+    try {
+      const updateData = await invoke<UpdateInfo>("check_for_updates");
+      setUpdateInfo(updateData);
+      setShowUpdateBanner(updateData.has_update);
+    } catch (error) {
+      console.error("Failed to check for updates:", error);
+    }
+  };
+
+  const handleUpdateClick = () => {
+    if (updateInfo?.download_url) {
+      open(updateInfo.download_url);
     }
   };
 
@@ -70,10 +109,49 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-zinc-900 text-white overflow-hidden">
+      {/* Update Banner */}
+      {showUpdateBanner && updateInfo && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Download className="h-5 w-5 text-white" />
+              <div>
+                <span className="text-white font-medium">
+                  Update available: v{updateInfo.latest_version}
+                </span>
+                <span className="text-blue-100 ml-2 text-sm">
+                  (current: v{updateInfo.current_version})
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleUpdateClick}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Update to v{updateInfo.latest_version}</span>
+              </button>
+              <button
+                onClick={() => setShowUpdateBanner(false)}
+                className="text-white/70 hover:text-white p-1 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 flex flex-col border-r border-zinc-800 bg-zinc-950/70 backdrop-blur-xl">
         {/* Header */}
-        <div className="flex flex-col items-center px-6 py-8 border-b border-zinc-800/50">
+        <div
+          className={cn(
+            "flex flex-col items-center px-6 py-8 border-b border-zinc-800/50",
+            showUpdateBanner && "pt-20"
+          )}
+        >
           <pre className="text-purple-400 text-[5px] leading-tight font-mono">
             {`
 ██████╗ ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
@@ -86,7 +164,7 @@ export default function App() {
           </pre>
           <div className="mt-2 text-center">
             <code className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">
-              v0.1.0
+              v{version}
             </code>
           </div>
         </div>
@@ -125,7 +203,12 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-zinc-900 overflow-hidden">
+      <main
+        className={cn(
+          "flex-1 flex flex-col bg-zinc-900 overflow-hidden",
+          showUpdateBanner && "pt-16"
+        )}
+      >
         {/* Header */}
         <header className="border-b border-zinc-800/50 bg-zinc-950/30 backdrop-blur-xl px-8 py-6 flex-shrink-0">
           <div className="flex items-center justify-between">

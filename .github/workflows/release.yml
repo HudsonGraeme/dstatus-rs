@@ -66,9 +66,19 @@ jobs:
           # Update version in Cargo.toml
           sed -i.bak "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
-          # Verify the change
+          # Update version in tauri.conf.json
+          sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" tauri.conf.json
+
+          # Update version in dstatus-ui/package.json
+          sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" dstatus-ui/package.json
+
+          # Verify the changes
           echo "Updated Cargo.toml version:"
           grep "^version" Cargo.toml
+          echo "Updated tauri.conf.json version:"
+          grep "version" tauri.conf.json | head -1
+          echo "Updated dstatus-ui/package.json version:"
+          grep "version" dstatus-ui/package.json | head -1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

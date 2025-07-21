@@ -162,6 +162,66 @@ async fn stop_daemon() -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn get_app_version() -> Result<String, String> {
+    Ok(env!("CARGO_PKG_VERSION").to_string())
+}
+
+#[tauri::command]
+async fn check_for_updates() -> Result<UpdateInfo, String> {
+    let current_version = env!("CARGO_PKG_VERSION");
+    let repo_url = "https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest";
+
+    let response = reqwest::get(repo_url)
+        .await
+        .map_err(|e| format!("Failed to check for updates: {}", e))?;
+
+    let release: GitHubRelease = response.json()
+        .await
+        .map_err(|e| format!("Failed to parse release data: {}", e))?;
+
+    let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
+    let has_update = version_compare(current_version, latest_version);
+
+    Ok(UpdateInfo {
+        current_version: current_version.to_string(),
+        latest_version: latest_version.to_string(),
+        has_update,
+        download_url: release.html_url,
+    })
+}
+
+fn version_compare(current: &str, latest: &str) -> bool {
+    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
+    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
+
+    for i in 0..std::cmp::max(current_parts.len(), latest_parts.len()) {
+        let current_part = current_parts.get(i).unwrap_or(&0);
+        let latest_part = latest_parts.get(i).unwrap_or(&0);
+
+        if latest_part > current_part {
+            return true;
+        } else if latest_part < current_part {
+            return false;
+        }
+    }
+    false
+}
+
+#[derive(Serialize, Deserialize)]
+struct UpdateInfo {
+    current_version: String,
+    latest_version: String,
+    has_update: bool,
+    download_url: String,
+}
+
+#[derive(Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    html_url: String,
+}
+
+#[tauri::command]
 async fn load_config_from_source(source: String) -> Result<Config, String> {
     let toml_content = if source.starts_with("http://") || source.starts_with("https://") {
         reqwest::get(&source)
@@ -226,7 +286,9 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             start_daemon,
             stop_daemon,
             reload_daemon_config,
-            load_config_from_source
+            load_config_from_source,
+            get_app_version,
+            check_for_updates
         ])
         .setup(|_app| Ok(()))
         .run(generate_context!())

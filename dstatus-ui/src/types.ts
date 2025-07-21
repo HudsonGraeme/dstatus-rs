@@ -22,3 +22,10 @@ export interface Template {
   description: string;
   config: Config;
 }
+
+export interface UpdateInfo {
+  current_version: string;
+  latest_version: string;
+  has_update: boolean;
+  download_url: string;
+}
