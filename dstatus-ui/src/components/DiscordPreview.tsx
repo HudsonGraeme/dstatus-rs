@@ -25,118 +25,171 @@ export default function DiscordPreview({ config }: DiscordPreviewProps) {
       return () => clearInterval(interval);
     }, []);
 
-    return <p className="text-xs text-zinc-400">{time}</p>;
+    return <span className="text-xs text-[#b5bac1]">{time}</span>;
   };
 
   return (
-    <div className="max-w-2xl">
-      <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/30 backdrop-blur-sm p-6">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-white">Discord Preview</h3>
-          <p className="text-sm text-zinc-400 mt-1">
-            This is how your Rich Presence will appear in Discord
-          </p>
+    <div className="max-w-3xl">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="h-8 w-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-sm">D</span>
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-white tracking-tight">
+              Discord Preview
+            </h3>
+            <p className="text-zinc-400 text-sm">
+              Live preview of your Rich Presence in user profile
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Discord Mockup */}
-        <div className="rounded-lg bg-[#36393f] border border-[#4f545c] p-4 font-['Whitney'] text-[#dcddde]">
-          <div className="flex items-start space-x-3">
-            {/* User Avatar */}
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm">
-              U
-            </div>
+      {/* Discord Profile Container */}
+      <div className="relative">
+        {/* Background blur effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#2b2d31]/80 to-[#1e1f22]/80 rounded-2xl blur-3xl"></div>
 
-            <div className="flex-1 space-y-2">
-              {/* User Info */}
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-white text-sm">
-                  Username
-                </span>
-                <span className="bg-[#5865f2] text-white text-xs px-2 py-0.5 rounded font-medium">
-                  Playing a game
-                </span>
-              </div>
+        {/* Main Discord Profile mockup */}
+        <div className="relative rounded-2xl bg-[#2b2d31] border border-[#3f4147]/50 overflow-hidden shadow-2xl max-w-md mx-auto">
+          {/* Live indicator */}
+          <div className="absolute top-3 right-3 z-10 flex items-center space-x-2 bg-[#23a55a]/20 backdrop-blur-sm border border-[#23a55a]/30 rounded-full px-3 py-1.5">
+            <div className="w-2 h-2 bg-[#23a55a] rounded-full animate-pulse"></div>
+            <span className="text-[#23a55a] font-medium text-xs">
+              Live Preview
+            </span>
+          </div>
 
-              {/* Activity Card */}
-              <div className="bg-[#2f3136] border border-[#4f545c] rounded-lg p-3">
-                <div className="flex items-start space-x-3">
-                  {/* Activity Images */}
-                  {large_image && (
-                    <div className="relative">
-                      <div className="w-16 h-16 bg-[#4f545c] rounded-lg flex items-center justify-center text-xs text-[#72767d] overflow-hidden">
-                        {large_image.startsWith("http") ? (
-                          <img
-                            src={large_image}
-                            alt={large_text || "Large image"}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <span className="text-center px-1">
-                            {large_image}
-                          </span>
-                        )}
-                      </div>
-                      {small_image && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#2f3136] rounded-full border-2 border-[#2f3136] flex items-center justify-center">
-                          <div className="w-5 h-5 bg-[#4f545c] rounded-full flex items-center justify-center text-xs text-[#72767d] overflow-hidden">
-                            {small_image.startsWith("http") ? (
-                              <img
-                                src={small_image}
-                                alt={small_text || "Small image"}
-                                className="w-full h-full object-cover rounded-full"
-                              />
-                            ) : (
-                              <span>{small_image.slice(0, 1)}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+          {/* Profile Header */}
+          <div className="relative">
+            {/* Banner */}
+            <div className="h-24 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700"></div>
 
-                  {/* Activity Details */}
-                  <div className="flex-1 space-y-1">
-                    <div className="font-semibold text-white text-sm">
-                      {details || "dstatus"}
-                    </div>
-                    {state && (
-                      <div className="text-[#b9bbbe] text-sm">{state}</div>
-                    )}
-                    {config.party_size > 0 && config.max_party_size > 0 && (
-                      <div className="text-[#b9bbbe] text-sm">
-                        ({config.party_size} of {config.max_party_size})
-                      </div>
-                    )}
-                    {config.timestamps && <ActivityTimestamp />}
-                  </div>
+            {/* Profile Picture */}
+            <div className="absolute -bottom-10 left-4">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full border-4 border-[#2b2d31] flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  You
                 </div>
-
-                {/* Buttons */}
-                {config.buttons && config.buttons.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {config.buttons.map((button, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#4f545c] hover:bg-[#5d6269] text-white text-sm py-1.5 px-3 rounded text-center cursor-pointer transition-colors"
-                      >
-                        {button.label || `Button ${index + 1}`}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Online Status */}
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#23a55a] border-4 border-[#2b2d31] rounded-full"></div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Preview Info */}
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-zinc-400">
-            Preview updates automatically as you edit
-          </span>
-          <div className="flex items-center space-x-2">
-            <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-green-400 font-medium">Live Preview</span>
+          {/* Profile Info */}
+          <div className="pt-12 px-4 pb-4">
+            {/* Username and badges */}
+            <div className="mb-3">
+              <h2 className="text-white font-bold text-xl">Your Username</h2>
+              <p className="text-[#b5bac1] text-sm">yourhandle</p>
+            </div>
+
+            {/* About Me */}
+            <div className="mb-4">
+              <h3 className="text-white font-semibold text-sm mb-2">
+                ABOUT ME
+              </h3>
+              <p className="text-[#dbdee1] text-sm">
+                Using DStatus for custom Rich Presence 🎮
+              </p>
+            </div>
+
+            {/* Playing Section */}
+            {(details || state || large_image || small_image) && (
+              <div className="mb-4">
+                <h3 className="text-white font-semibold text-sm mb-3 flex items-center">
+                  PLAYING A GAME
+                  <div className="ml-2 flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-[#23a55a] rounded-full animate-pulse"></div>
+                    <span className="text-[#23a55a] text-xs font-medium">
+                      Live
+                    </span>
+                  </div>
+                </h3>
+
+                {/* Rich Presence Activity */}
+                <div className="bg-[#1e1f22] rounded-lg p-3 border border-[#3f4147]">
+                  <div className="flex space-x-3">
+                    {/* Large Image */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                        {large_image ? (
+                          <span className="text-white font-bold text-xs">
+                            {large_image.slice(0, 3).toUpperCase()}
+                          </span>
+                        ) : (
+                          <div className="w-8 h-8 bg-white/20 rounded"></div>
+                        )}
+                      </div>
+                      {/* Small Image */}
+                      {small_image && (
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-full border-2 border-[#1e1f22] flex items-center justify-center">
+                          <span className="text-white font-bold text-[8px]">
+                            {small_image.slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Activity Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white text-sm leading-tight mb-1">
+                        {details || "DStatus Rich Presence"}
+                      </div>
+                      {state && (
+                        <div className="text-[#b5bac1] text-sm leading-tight mb-1">
+                          {state}
+                        </div>
+                      )}
+
+                      {/* Metadata */}
+                      <div className="flex items-center space-x-2 text-xs text-[#87898c]">
+                        <ActivityTimestamp />
+                        {config.party_size > 0 && config.max_party_size > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>
+                              ({config.party_size} of {config.max_party_size})
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {(large_text || small_text) && (
+                        <div className="text-[#87898c] text-xs mt-1">
+                          {large_text && <span>{large_text}</span>}
+                          {large_text && small_text && <span> • </span>}
+                          {small_text && <span>{small_text}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
+                  {config.buttons && config.buttons.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {config.buttons.map((button, index) => (
+                        <button
+                          key={index}
+                          className="w-full bg-[#4e5058] hover:bg-[#5d6269] text-white text-sm py-2 px-3 rounded transition-all duration-200 font-medium"
+                        >
+                          {button.label || `Button ${index + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Member Since */}
+            <div className="text-[#b5bac1] text-xs">
+              <span className="font-semibold">DISCORD MEMBER SINCE</span>
+              <div className="mt-1">Jan 15, 2020</div>
+            </div>
           </div>
         </div>
       </div>
