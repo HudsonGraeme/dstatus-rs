@@ -122,9 +122,9 @@ fn main() {
         .unwrap_or(false);
 
     // Show GUI if:
-    // 1. Launched from .app bundle, OR
+    // 1. No arguments AND launched from .app bundle, OR
     // 2. Explicitly requested with "gui" command
-    if is_app_bundle || (args.len() > 1 && args[1] == "gui") {
+    if (args.len() == 1 && is_app_bundle) || (args.len() > 1 && args[1] == "gui") {
         main_gui();
     } else {
         main_cli();
