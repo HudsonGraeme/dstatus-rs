@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/api/shell";
 import { invoke } from "@tauri-apps/api/tauri";
 import {
   Activity,
+  Code,
   Download,
   Eye,
   Loader,
@@ -17,7 +18,7 @@ import TemplateGallery from "./components/TemplateGallery";
 import { cn } from "./lib/utils";
 import { Config, Template, UpdateInfo } from "./types";
 
-type Tab = "config" | "preview" | "templates" | "status";
+type Tab = "config" | "preview" | "templates" | "status" | "developers";
 
 const tabs: {
   id: Tab;
@@ -28,6 +29,7 @@ const tabs: {
   { id: "preview", label: "Preview", icon: Eye },
   { id: "templates", label: "Templates", icon: Palette },
   { id: "status", label: "Daemon Status", icon: Activity },
+  { id: "developers", label: "Developers", icon: Code },
 ];
 
 export default function App() {
@@ -37,11 +39,24 @@ export default function App() {
   const [version, setVersion] = useState<string>("0.1.0");
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [daemonStatus, setDaemonStatus] = useState<boolean>(false);
 
   useEffect(() => {
     loadConfig();
     loadVersion();
     checkForUpdates();
+    checkDaemonStatus();
+
+    // Check for updates every minute
+    const updateInterval = setInterval(checkForUpdates, 60000);
+
+    // Check daemon status every 5 seconds
+    const statusInterval = setInterval(checkDaemonStatus, 5000);
+
+    return () => {
+      clearInterval(updateInterval);
+      clearInterval(statusInterval);
+    };
   }, []);
 
   const loadConfig = async () => {
@@ -71,6 +86,16 @@ export default function App() {
       setShowUpdateBanner(updateData.has_update);
     } catch (error) {
       console.error("Failed to check for updates:", error);
+    }
+  };
+
+  const checkDaemonStatus = async () => {
+    try {
+      const isRunning = await invoke<boolean>("check_daemon_status");
+      setDaemonStatus(isRunning);
+    } catch (error) {
+      console.error("Failed to check daemon status:", error);
+      setDaemonStatus(false);
     }
   };
 
@@ -215,7 +240,16 @@ export default function App() {
             <h2 className="text-2xl font-bold tracking-tight">
               {tabs.find((t) => t.id === activeTab)?.label}
             </h2>
-            <div className="h-3 w-3 rounded-full bg-green-400 shadow-sm animate-pulse" />
+            <div className="flex items-center space-x-3">
+              <span className="text-xs text-zinc-400">
+                {daemonStatus ? "Daemon Running" : "Daemon Stopped"}
+              </span>
+              <div
+                className={`h-3 w-3 rounded-full shadow-sm ${
+                  daemonStatus ? "bg-green-400 animate-pulse" : "bg-red-400"
+                }`}
+              />
+            </div>
           </div>
         </header>
 
@@ -238,6 +272,133 @@ export default function App() {
             <div className="h-full overflow-y-auto p-8">
               <div className="max-w-2xl">
                 <DaemonStatus />
+              </div>
+            </div>
+          )}
+          {activeTab === "developers" && (
+            <div className="h-full overflow-y-auto p-8">
+              <div className="max-w-3xl mx-auto space-y-8">
+                {/* Header */}
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    Discord Developer Setup
+                  </h2>
+                  <p className="text-zinc-400">
+                    Create your Discord application to get started
+                  </p>
+                </div>
+
+                {/* Video Tutorial */}
+                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl overflow-hidden">
+                  <div className="aspect-video bg-zinc-900">
+                    <video
+                      className="w-full h-full rounded-t-xl"
+                      controls
+                      preload="metadata"
+                    >
+                      <source src="/tutorial.mp4" type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-white font-medium">
+                      How to Create a Discord Application
+                    </h3>
+                    <p className="text-zinc-400 text-sm">
+                      Step-by-step guide to get your Client ID
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <button
+                    onClick={() =>
+                      open("https://discord.com/developers/applications")
+                    }
+                    className="bg-[#5865f2] hover:bg-[#4752c4] text-white p-4 rounded-xl transition-all duration-200 flex items-center space-x-3"
+                  >
+                    <Code className="h-5 w-5" />
+                    <span className="font-medium">Open Developer Portal</span>
+                    <svg
+                      className="w-4 h-4 ml-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      open(
+                        "https://discord.com/developers/docs/rich-presence/how-to"
+                      )
+                    }
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white p-4 rounded-xl transition-all duration-200 flex items-center space-x-3 border border-zinc-700"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span className="font-medium">Documentation</span>
+                    <svg
+                      className="w-4 h-4 ml-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Simple Steps */}
+                <div className="bg-zinc-800/20 border border-zinc-700/30 rounded-xl p-6">
+                  <h3 className="text-white font-medium mb-4">Quick Steps</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center space-x-3 text-zinc-300">
+                      <span className="bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                        1
+                      </span>
+                      <span>
+                        Create application in Discord Developer Portal
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-zinc-300">
+                      <span className="bg-purple-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                        2
+                      </span>
+                      <span>Copy the Application ID (Client ID)</span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-zinc-300">
+                      <span className="bg-green-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                        3
+                      </span>
+                      <span>Paste it in the Configuration tab</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
