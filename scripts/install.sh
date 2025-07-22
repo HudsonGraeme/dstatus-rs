@@ -4,7 +4,7 @@ set -e
 
 # Configuration
 REPO="HudsonGraeme/dstatus-rs"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="$HOME/.local/bin"
 BINARY_NAME="dstatus"
 
 # Detect OS and architecture
@@ -51,6 +51,9 @@ echo "Downloading ${BINARY_NAME} from ${DOWNLOAD_URL}"
 curl -L -o "/tmp/${ASSET_NAME}" "$DOWNLOAD_URL"
 
 echo "Installing ${BINARY_NAME}..."
+# Create install directory if it doesn't exist
+mkdir -p "${INSTALL_DIR}"
+
 if [[ "$ASSET_NAME" == *.tar.gz ]]; then
     # Linux: Extract binary directly
     tar -xzf "/tmp/${ASSET_NAME}" -C "/tmp"
@@ -70,9 +73,8 @@ elif [[ "$ASSET_NAME" == *.zip ]]; then
         echo "Installing ${BINARY_NAME}.app to /Applications/"
         mv "/tmp/${BINARY_NAME}.app" "/Applications/"
 
-        # Create symlink in /usr/local/bin/
+        # Create symlink in ~/.local/bin/
         echo "Creating symlink in ${INSTALL_DIR}/"
-        mkdir -p "${INSTALL_DIR}"
         ln -sf "/Applications/${BINARY_NAME}.app/Contents/MacOS/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
     else
         # Fallback for regular zip file
@@ -92,10 +94,25 @@ else
     echo "You can now run: ${BINARY_NAME}"
 fi
 
+# Check if ~/.local/bin is in PATH
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo ""
+    echo "Note: ~/.local/bin is not in your PATH."
+    echo "Add this line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
+    echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo ""
+    echo "After adding it, restart your terminal or run:"
+    echo "source ~/.bashrc  # or ~/.zshrc"
+fi
+
 # Install man page
 echo "Installing man page..."
-if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
-    "${BINARY_NAME}" install-man
+if command -v "${BINARY_NAME}" >/dev/null 2>&1 || [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+    if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
+        "${BINARY_NAME}" install-man
+    else
+        "${INSTALL_DIR}/${BINARY_NAME}" install-man
+    fi
 else
     echo "Warning: Could not install man page automatically. Run 'dstatus install-man' later."
 fi

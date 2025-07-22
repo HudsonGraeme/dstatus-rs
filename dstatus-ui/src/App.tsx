@@ -12,6 +12,7 @@ import {
   Play,
   Plus,
   Settings,
+  Terminal,
   Trash2,
   Upload,
   X,
@@ -39,7 +40,7 @@ const tabs: {
 
 export default function App() {
   const [config, setConfig] = useState<Config | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("config");
+  const [activeTab, setActiveTab] = useState<Tab>("getstarted");
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState<string>("0.1.0");
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -55,6 +56,9 @@ export default function App() {
   const [templateHashes, setTemplateHashes] = useState<Map<string, string>>(
     new Map()
   );
+  const [cliInstalled, setCliInstalled] = useState<boolean>(false);
+  const [cliInstalling, setCliInstalling] = useState<boolean>(false);
+  const [cliInstallMessage, setCliInstallMessage] = useState<string>("");
 
   useEffect(() => {
     loadConfig();
@@ -63,6 +67,7 @@ export default function App() {
     checkDaemonStatus();
     loadUserTemplates();
     loadGalleryTemplatesHashes();
+    checkCliInstalled();
 
     const updateInterval = setInterval(checkForUpdates, 60000);
     const statusInterval = setInterval(checkDaemonStatus, 5000);
@@ -335,6 +340,30 @@ max_party_size = ${config.max_party_size}`;
     const key = "id" in template ? template.id : template.name;
     const templateHash = templateHashes.get(key);
     return templateHash === configHash && configHash !== "";
+  };
+
+  const checkCliInstalled = async () => {
+    try {
+      const installed = await invoke<boolean>("check_cli_installed");
+      setCliInstalled(installed);
+    } catch (error) {
+      console.error("Failed to check CLI installation:", error);
+      setCliInstalled(false);
+    }
+  };
+
+  const installCli = async () => {
+    setCliInstalling(true);
+    try {
+      const message = await invoke<string>("install_cli");
+      setCliInstallMessage(message);
+      setCliInstalled(true);
+    } catch (error) {
+      console.error("Failed to install CLI:", error);
+      setCliInstallMessage(`Installation failed: ${error}`);
+    } finally {
+      setCliInstalling(false);
+    }
   };
 
   if (loading) {
@@ -646,6 +675,89 @@ max_party_size = ${config.max_party_size}`;
           {activeTab === "getstarted" && (
             <div className="h-full overflow-y-auto p-6">
               <div className="max-w-3xl mx-auto space-y-8">
+                {/* CLI Status Card */}
+                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-white font-medium text-lg flex items-center space-x-2">
+                        <Terminal className="h-5 w-5" />
+                        <span>Command Line Interface</span>
+                      </h3>
+                      <p className="text-zinc-400 text-sm mt-1">
+                        Access dstatus from your terminal
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium",
+                        cliInstalled
+                          ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                          : "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+                      )}
+                    >
+                      {cliInstalled ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          <span>Installed</span>
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-3 w-3" />
+                          <span>Not Installed</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {!cliInstalled && (
+                    <div className="mb-4">
+                      <button
+                        onClick={installCli}
+                        disabled={cliInstalling}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+                      >
+                        {cliInstalling ? (
+                          <>
+                            <Loader className="h-4 w-4 animate-spin" />
+                            <span>Installing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Terminal className="h-4 w-4" />
+                            <span>Install CLI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {cliInstallMessage && (
+                    <div className="mb-4 p-3 bg-zinc-900/50 border border-zinc-700/50 rounded-lg">
+                      <p className="text-zinc-300 text-xs whitespace-pre-line">
+                        {cliInstallMessage}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 text-xs">
+                    <div className="text-zinc-400">Available commands:</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
+                        dstatus on
+                      </code>
+                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
+                        dstatus off
+                      </code>
+                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
+                        dstatus configure
+                      </code>
+                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
+                        dstatus gui
+                      </code>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl overflow-hidden">
                   <div className="aspect-video bg-zinc-900">
                     <video

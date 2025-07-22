@@ -412,11 +412,89 @@ fn load_user_templates_from_disk() -> Result<Vec<UserTemplate>, String> {
     Ok(templates_data.templates)
 }
 
+#[tauri::command]
+async fn check_cli_installed() -> Result<bool, String> {
+    use std::process::Command;
 
+    let output = Command::new("which")
+        .arg("dstatus")
+        .output();
 
+    match output {
+        Ok(result) => Ok(result.status.success()),
+        Err(_) => Ok(false),
+    }
+}
 
+#[tauri::command]
+async fn install_cli() -> Result<String, String> {
+    install_cli_binary().await
+}
 
+async fn install_cli_binary() -> Result<String, String> {
+    use std::fs;
+    use std::process::Command;
 
+    let current_exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+
+    let home_dir = dirs::home_dir()
+        .ok_or("Failed to get home directory")?;
+
+    let local_bin = home_dir.join(".local").join("bin");
+
+    fs::create_dir_all(&local_bin)
+        .map_err(|e| format!("Failed to create ~/.local/bin directory: {}", e))?;
+
+    let cli_target = local_bin.join("dstatus");
+
+    if cli_target.exists() {
+        fs::remove_file(&cli_target)
+            .map_err(|e| format!("Failed to remove existing CLI: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::fs;
+        fs::symlink(&current_exe, &cli_target)
+            .map_err(|e| format!("Failed to create CLI symlink: {}", e))?;
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        fs::copy(&current_exe, &cli_target)
+            .map_err(|e| format!("Failed to copy CLI binary: {}", e))?;
+
+        let mut perms = fs::metadata(&cli_target)
+            .map_err(|e| format!("Failed to get CLI permissions: {}", e))?
+            .permissions();
+
+        use std::os::unix::fs::PermissionsExt;
+        perms.set_mode(0o755);
+
+        fs::set_permissions(&cli_target, perms)
+            .map_err(|e| format!("Failed to set CLI permissions: {}", e))?;
+    }
+
+    let path_env = std::env::var("PATH").unwrap_or_default();
+    let local_bin_str = local_bin.to_string_lossy();
+
+    if !path_env.split(':').any(|p| p == local_bin_str) {
+        return Ok(format!(
+            "CLI installed to {}. Please add ~/.local/bin to your PATH:\nexport PATH=\"$HOME/.local/bin:$PATH\"",
+            cli_target.display()
+        ));
+    }
+
+    Ok(format!("CLI installed successfully to {}", cli_target.display()))
+}
+
+async fn ensure_cli_available() -> Result<(), String> {
+    if !check_cli_installed().await? {
+        install_cli_binary().await?;
+    }
+    Ok(())
+}
 
 
 pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
@@ -464,9 +542,16 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             save_user_template,
             delete_user_template,
             load_user_template,
-            get_config_hash
+            get_config_hash,
+            check_cli_installed,
+            install_cli
         ])
-        .setup(|_app| Ok(()))
+        .setup(|_app| {
+            tauri::async_runtime::spawn(async {
+                let _ = ensure_cli_available().await;
+            });
+            Ok(())
+        })
         .run(generate_context!())
         .expect("error while running tauri application");
 
