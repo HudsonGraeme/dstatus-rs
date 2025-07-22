@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Button {
     pub label: String,
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 pub struct Config {
     #[serde(default)]
     pub name: String,
@@ -24,6 +24,20 @@ pub struct Config {
     pub party_size: i32,
     pub max_party_size: i32,
     pub buttons: Option<Vec<Button>>,
+    #[serde(default)]
+    pub start_timestamp: Option<i64>,
+    #[serde(default)]
+    pub end_timestamp: Option<i64>,
+    #[serde(default)]
+    pub party_max: Option<i32>,
+    #[serde(default)]
+    pub match_secret: Option<String>,
+    #[serde(default)]
+    pub join_secret: Option<String>,
+    #[serde(default)]
+    pub spectate_secret: Option<String>,
+    #[serde(default)]
+    pub instance: Option<bool>,
 }
 
 impl Config {

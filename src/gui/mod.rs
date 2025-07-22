@@ -6,16 +6,41 @@ use std::path::PathBuf;
 
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Template {
     name: String,
     description: String,
     config: Config,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+struct UserTemplate {
+    id: String,
+    name: String,
+    description: String,
+    config: Config,
+    created_at: String,
+    last_used: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct UpdateInfo {
+    current_version: String,
+    latest_version: String,
+    has_update: bool,
+    download_url: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    html_url: String,
+}
+
 struct AppState {
     config: Mutex<Config>,
     config_path: Mutex<PathBuf>,
+    user_templates: Mutex<Vec<UserTemplate>>,
 }
 
 #[tauri::command]
@@ -207,20 +232,6 @@ fn version_compare(current: &str, latest: &str) -> bool {
     false
 }
 
-#[derive(Serialize, Deserialize)]
-struct UpdateInfo {
-    current_version: String,
-    latest_version: String,
-    has_update: bool,
-    download_url: String,
-}
-
-#[derive(Deserialize)]
-struct GitHubRelease {
-    tag_name: String,
-    html_url: String,
-}
-
 #[tauri::command]
 async fn load_config_from_source(source: String) -> Result<Config, String> {
     let toml_content = if source.starts_with("http://") || source.starts_with("https://") {
@@ -248,31 +259,191 @@ async fn load_config_from_source(source: String) -> Result<Config, String> {
     Ok(config)
 }
 
+fn calculate_config_hash(config: &Config) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    // Hash the main config fields that matter for template comparison
+    config.client_id.hash(&mut hasher);
+    config.details.hash(&mut hasher);
+    config.state.hash(&mut hasher);
+    config.large_image.hash(&mut hasher);
+    config.large_text.hash(&mut hasher);
+    config.small_image.hash(&mut hasher);
+    config.small_text.hash(&mut hasher);
+    config.start_timestamp.hash(&mut hasher);
+    config.end_timestamp.hash(&mut hasher);
+    config.party_size.hash(&mut hasher);
+    config.party_max.hash(&mut hasher);
+    config.match_secret.hash(&mut hasher);
+    config.join_secret.hash(&mut hasher);
+    config.spectate_secret.hash(&mut hasher);
+    config.instance.hash(&mut hasher);
+
+    format!("{:x}", hasher.finish())
+}
+
+#[tauri::command]
+async fn get_config_hash(config: Config) -> Result<String, String> {
+    Ok(calculate_config_hash(&config))
+}
+
+#[tauri::command]
+async fn get_user_templates(state: State<'_, AppState>) -> Result<Vec<UserTemplate>, String> {
+    let templates = state.user_templates.lock().unwrap();
+    Ok(templates.clone())
+}
+
+#[tauri::command]
+async fn save_user_template(template: UserTemplate, state: State<'_, AppState>) -> Result<(), String> {
+    let mut templates = state.user_templates.lock().unwrap();
+
+    // Remove existing template with same ID if it exists
+    templates.retain(|t| t.id != template.id);
+
+    // Add the new template
+    templates.push(template);
+
+    // Save to disk
+    save_user_templates_to_disk(&templates)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_user_template(template_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut templates = state.user_templates.lock().unwrap();
+    templates.retain(|t| t.id != template_id);
+
+    // Save to disk
+    save_user_templates_to_disk(&templates)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_user_template(template_id: String, state: State<'_, AppState>) -> Result<Config, String> {
+    let config = {
+        let mut templates = state.user_templates.lock().unwrap();
+        if let Some(template) = templates.iter_mut().find(|t| t.id == template_id) {
+            template.last_used = chrono::Utc::now().to_rfc3339();
+            template.config.clone()
+        } else {
+            return Err("Template not found".to_string());
+        }
+    };
+
+    // Update the main config
+    {
+        let mut main_config = state.config.lock().unwrap();
+        *main_config = config.clone();
+    }
+
+    // Save the updated config to file directly
+    let file_path = {
+        let config_path = state.config_path.lock().unwrap();
+        config_path.to_string_lossy().to_string()
+    };
+
+    config.save_to_file(&file_path)
+        .map_err(|e| format!("Failed to save config: {}", e))?;
+
+    // Send SIGHUP to daemon to reload config
+    reload_daemon_config().await?;
+
+    // Save templates to update last_used time
+    let templates = state.user_templates.lock().unwrap();
+    save_user_templates_to_disk(&templates)?;
+
+    Ok(config)
+}
+
+fn save_user_templates_to_disk(templates: &[UserTemplate]) -> Result<(), String> {
+    let config_dir = dirs::config_dir()
+        .ok_or("Failed to get config directory")?
+        .join("dstatus");
+
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("Failed to create config directory: {}", e))?;
+
+    let templates_file = config_dir.join("user_templates.toml");
+
+    #[derive(Serialize)]
+    struct UserTemplatesFile {
+        templates: Vec<UserTemplate>,
+    }
+
+    let templates_data = UserTemplatesFile {
+        templates: templates.to_vec(),
+    };
+
+    let toml_string = toml::to_string_pretty(&templates_data)
+        .map_err(|e| format!("Failed to serialize templates: {}", e))?;
+
+    std::fs::write(&templates_file, toml_string)
+        .map_err(|e| format!("Failed to write templates file: {}", e))?;
+
+    Ok(())
+}
+
+fn load_user_templates_from_disk() -> Result<Vec<UserTemplate>, String> {
+    let config_dir = dirs::config_dir()
+        .ok_or("Failed to get config directory")?
+        .join("dstatus");
+
+    let templates_file = config_dir.join("user_templates.toml");
+
+    if !templates_file.exists() {
+        return Ok(Vec::new());
+    }
+
+    let toml_content = std::fs::read_to_string(&templates_file)
+        .map_err(|e| format!("Failed to read templates file: {}", e))?;
+
+    #[derive(Deserialize)]
+    struct UserTemplatesFile {
+        templates: Vec<UserTemplate>,
+    }
+
+    let templates_data: UserTemplatesFile = toml::from_str(&toml_content)
+        .map_err(|e| format!("Failed to parse templates file: {}", e))?;
+
+    Ok(templates_data.templates)
+}
+
+
+
+
+
+
+
 
 pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
-    let config_dir = crate::get_config_dir();
-    let config_file = config_dir.join("configuration.toml");
+    // Load or create default config
+    let config_dir = dirs::config_dir()
+        .ok_or("Failed to get config directory")?
+        .join("dstatus");
+    std::fs::create_dir_all(&config_dir)?;
 
-    let config = Config::from_file(config_file.to_str().unwrap()).unwrap_or_else(|_| {
-        Config {
-            name: "".to_string(),
-            description: "".to_string(),
-            client_id: "".to_string(),
-            details: "".to_string(),
-            state: "".to_string(),
-            large_image: "".to_string(),
-            large_text: "".to_string(),
-            small_image: "".to_string(),
-            small_text: "".to_string(),
-            party_size: 0,
-            max_party_size: 0,
-            buttons: None,
-        }
-    });
+    let config_file = config_dir.join("config.toml");
+    let config = if config_file.exists() {
+        let content = std::fs::read_to_string(&config_file)?;
+        toml::from_str(&content).unwrap_or_else(|_| Config::default())
+    } else {
+        let default_config = Config::default();
+        let toml_content = toml::to_string_pretty(&default_config)?;
+        std::fs::write(&config_file, toml_content)?;
+        default_config
+    };
+
+    // Load user templates from disk
+    let user_templates = load_user_templates_from_disk().unwrap_or_else(|_| Vec::new());
 
     let state = AppState {
         config: Mutex::new(config),
         config_path: Mutex::new(config_file),
+        user_templates: Mutex::new(user_templates),
     };
 
     tauri::Builder::default()
@@ -288,7 +459,12 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             reload_daemon_config,
             load_config_from_source,
             get_app_version,
-            check_for_updates
+            check_for_updates,
+            get_user_templates,
+            save_user_template,
+            delete_user_template,
+            load_user_template,
+            get_config_hash
         ])
         .setup(|_app| Ok(()))
         .run(generate_context!())

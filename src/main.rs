@@ -198,6 +198,13 @@ fn main_cli() {
                     party_size: 0,
                     max_party_size: 0,
                     buttons: None,
+                    start_timestamp: None,
+                    end_timestamp: None,
+                    party_max: None,
+                    match_secret: None,
+                    join_secret: None,
+                    spectate_secret: None,
+                    instance: None,
                 }
             });
             let updated_config = tui::run_tui(config).unwrap();

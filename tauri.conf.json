@@ -80,7 +80,7 @@
                 "fullscreen": false,
                 "height": 700,
                 "resizable": true,
-                "title": "DStatus",
+                "title": "",
                 "width": 1000,
                 "minWidth": 800,
                 "minHeight": 600,

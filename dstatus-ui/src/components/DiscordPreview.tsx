@@ -30,23 +30,6 @@ export default function DiscordPreview({ config }: DiscordPreviewProps) {
 
   return (
     <div className="max-w-3xl">
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="h-8 w-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">D</span>
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-white tracking-tight">
-              Discord Preview
-            </h3>
-            <p className="text-zinc-400 text-sm">
-              Live preview of your Rich Presence in user profile
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Discord Profile Container */}
       <div className="relative">
         {/* Background blur effect */}
