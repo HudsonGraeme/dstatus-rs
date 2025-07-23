@@ -11,6 +11,7 @@ import {
   Palette,
   Play,
   Plus,
+  RefreshCw,
   Settings,
   Terminal,
   Trash2,
@@ -59,6 +60,8 @@ export default function App() {
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
   const [cliInstalling, setCliInstalling] = useState<boolean>(false);
   const [cliInstallMessage, setCliInstallMessage] = useState<string>("");
+  const [checkingUpdates, setCheckingUpdates] = useState<boolean>(false);
+  const [lastUpdateCheck, setLastUpdateCheck] = useState<Date | null>(null);
 
   useEffect(() => {
     loadConfig();
@@ -69,7 +72,7 @@ export default function App() {
     loadGalleryTemplatesHashes();
     checkCliInstalled();
 
-    const updateInterval = setInterval(checkForUpdates, 60000);
+    const updateInterval = setInterval(checkForUpdates, 300000);
     const statusInterval = setInterval(checkDaemonStatus, 5000);
 
     return () => {
@@ -160,12 +163,31 @@ export default function App() {
   };
 
   const checkForUpdates = async () => {
+    setCheckingUpdates(true);
     try {
+      console.log("Checking for updates...");
       const updateData = await invoke<UpdateInfo>("check_for_updates");
+      console.log("Update check result:", updateData);
       setUpdateInfo(updateData);
       setShowUpdateBanner(updateData.has_update);
+
+      if (updateData.has_update) {
+        console.log(
+          `Update available: ${updateData.current_version} → ${updateData.latest_version}`
+        );
+      } else {
+        console.log(
+          `No update available. Current: ${updateData.current_version}, Latest: ${updateData.latest_version}`
+        );
+      }
+      setLastUpdateCheck(new Date());
     } catch (error) {
       console.error("Failed to check for updates:", error);
+      setUpdateInfo(null);
+      setShowUpdateBanner(false);
+      setLastUpdateCheck(new Date());
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
@@ -357,7 +379,8 @@ max_party_size = ${config.max_party_size}`;
     try {
       const message = await invoke<string>("install_cli");
       setCliInstallMessage(message);
-      setCliInstalled(true);
+      // Re-check CLI status after installation to verify it's actually working
+      await checkCliInstalled();
     } catch (error) {
       console.error("Failed to install CLI:", error);
       setCliInstallMessage(`Installation failed: ${error}`);
@@ -507,8 +530,48 @@ max_party_size = ${config.max_party_size}`;
         </nav>
 
         {/* Footer Status */}
-        <div className="p-4 border-t border-zinc-800/50">
+        <div className="p-4 border-t border-zinc-800/50 space-y-3">
           <DaemonStatus />
+
+          {/* Update Status */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    updateInfo?.has_update
+                      ? "bg-orange-400 animate-pulse"
+                      : "bg-green-400"
+                  )}
+                />
+                <span className="text-xs text-zinc-400">
+                  {updateInfo?.has_update
+                    ? `v${updateInfo.latest_version} available`
+                    : "Up to date"}
+                </span>
+              </div>
+              <button
+                onClick={checkForUpdates}
+                disabled={checkingUpdates}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:text-zinc-600"
+                title="Check for updates"
+              >
+                {checkingUpdates ? (
+                  <Loader className="h-3 w-3 animate-spin" />
+                ) : updateInfo?.has_update ? (
+                  <Download className="h-3 w-3" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+              </button>
+            </div>
+            {lastUpdateCheck && (
+              <div className="text-xs text-zinc-500">
+                Last checked: {lastUpdateCheck.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -675,6 +738,51 @@ max_party_size = ${config.max_party_size}`;
           {activeTab === "getstarted" && (
             <div className="h-full overflow-y-auto p-6">
               <div className="max-w-3xl mx-auto space-y-8">
+                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl overflow-hidden">
+                  <div className="aspect-video bg-zinc-900">
+                    <video
+                      className="w-full h-full rounded-t-xl"
+                      controls
+                      preload="metadata"
+                    >
+                      <source src="/tutorial.mp4" type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-white font-medium text-sm">
+                      How to Create a Discord Application
+                    </h3>
+                    <p className="text-zinc-400 text-xs">
+                      Step-by-step guide to get your Client ID
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-3">
+                  <button
+                    onClick={() =>
+                      open("https://discord.com/developers/applications")
+                    }
+                    className="bg-[#5865f2] hover:bg-[#4752c4] text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 text-sm"
+                  >
+                    <Code className="h-4 w-4" />
+                    <span>Developer Portal</span>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      open(
+                        "https://discord.com/developers/docs/rich-presence/how-to"
+                      )
+                    }
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 border border-zinc-700 text-sm"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Documentation</span>
+                  </button>
+                </div>
+
                 {/* CLI Status Card */}
                 <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -698,16 +806,28 @@ max_party_size = ${config.max_party_size}`;
                       {cliInstalled ? (
                         <>
                           <Check className="h-3 w-3" />
-                          <span>Installed</span>
+                          <span>Working</span>
                         </>
                       ) : (
                         <>
                           <X className="h-3 w-3" />
-                          <span>Not Installed</span>
+                          <span>Not Available</span>
                         </>
                       )}
                     </div>
                   </div>
+
+                  {cliInstalled && (
+                    <div className="mb-4">
+                      <button
+                        onClick={checkCliInstalled}
+                        className="text-zinc-400 hover:text-zinc-200 text-xs transition-colors flex items-center space-x-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Test CLI</span>
+                      </button>
+                    </div>
+                  )}
 
                   {!cliInstalled && (
                     <div className="mb-4">
@@ -756,51 +876,6 @@ max_party_size = ${config.max_party_size}`;
                       </code>
                     </div>
                   </div>
-                </div>
-
-                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl overflow-hidden">
-                  <div className="aspect-video bg-zinc-900">
-                    <video
-                      className="w-full h-full rounded-t-xl"
-                      controls
-                      preload="metadata"
-                    >
-                      <source src="/tutorial.mp4" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-white font-medium text-sm">
-                      How to Create a Discord Application
-                    </h3>
-                    <p className="text-zinc-400 text-xs">
-                      Step-by-step guide to get your Client ID
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-3">
-                  <button
-                    onClick={() =>
-                      open("https://discord.com/developers/applications")
-                    }
-                    className="bg-[#5865f2] hover:bg-[#4752c4] text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 text-sm"
-                  >
-                    <Code className="h-4 w-4" />
-                    <span>Developer Portal</span>
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      open(
-                        "https://discord.com/developers/docs/rich-presence/how-to"
-                      )
-                    }
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 border border-zinc-700 text-sm"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>Documentation</span>
-                  </button>
                 </div>
 
                 <div className="bg-zinc-800/20 border border-zinc-700/30 rounded-lg p-4">

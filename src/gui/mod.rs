@@ -196,6 +196,8 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
     let current_version = env!("CARGO_PKG_VERSION");
     let repo_url = "https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest";
 
+    println!("Checking for updates. Current version: {}", current_version);
+
     let response = reqwest::get(repo_url)
         .await
         .map_err(|e| format!("Failed to check for updates: {}", e))?;
@@ -206,6 +208,9 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
 
     let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name);
     let has_update = version_compare(current_version, latest_version);
+
+    println!("Latest version from GitHub: {} (tag: {})", latest_version, release.tag_name);
+    println!("Has update: {}", has_update);
 
     Ok(UpdateInfo {
         current_version: current_version.to_string(),
@@ -219,16 +224,24 @@ fn version_compare(current: &str, latest: &str) -> bool {
     let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
     let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
 
+    println!("Comparing versions: {} vs {}", current, latest);
+    println!("Current parts: {:?}, Latest parts: {:?}", current_parts, latest_parts);
+
     for i in 0..std::cmp::max(current_parts.len(), latest_parts.len()) {
         let current_part = current_parts.get(i).unwrap_or(&0);
         let latest_part = latest_parts.get(i).unwrap_or(&0);
 
+        println!("Comparing part {}: {} vs {}", i, current_part, latest_part);
+
         if latest_part > current_part {
+            println!("Latest version is newer");
             return true;
         } else if latest_part < current_part {
+            println!("Current version is newer");
             return false;
         }
     }
+    println!("Versions are equal");
     false
 }
 
@@ -416,13 +429,43 @@ fn load_user_templates_from_disk() -> Result<Vec<UserTemplate>, String> {
 async fn check_cli_installed() -> Result<bool, String> {
     use std::process::Command;
 
-    let output = Command::new("which")
+    // First check if dstatus command exists in PATH
+    let which_output = Command::new("which")
         .arg("dstatus")
         .output();
 
-    match output {
-        Ok(result) => Ok(result.status.success()),
-        Err(_) => Ok(false),
+    match which_output {
+        Ok(result) if result.status.success() => {
+            // If found in PATH, test if it actually works by running --help
+            println!("Found dstatus in PATH, testing functionality...");
+            let help_output = Command::new("dstatus")
+                .arg("--help")
+                .output();
+
+            match help_output {
+                Ok(help_result) if help_result.status.success() => {
+                    let help_str = String::from_utf8_lossy(&help_result.stdout);
+                    println!("CLI test successful, help output length: {}", help_str.len());
+                    Ok(true)
+                }
+                Ok(_) => {
+                    println!("CLI found but --help failed");
+                    Ok(false)
+                }
+                Err(e) => {
+                    println!("CLI found but execution failed: {}", e);
+                    Ok(false)
+                }
+            }
+        }
+        Ok(_) => {
+            println!("dstatus not found in PATH");
+            Ok(false)
+        }
+        Err(e) => {
+            println!("Failed to check PATH: {}", e);
+            Ok(false)
+        }
     }
 }
 
