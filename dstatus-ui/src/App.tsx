@@ -336,6 +336,15 @@ max_party_size = ${config.max_party_size}`;
 
   const deleteUserTemplate = async (templateId: string) => {
     try {
+      // Close dynamic island if the deleted template is currently selected
+      if (
+        selectedTemplate &&
+        "id" in selectedTemplate &&
+        selectedTemplate.id === templateId
+      ) {
+        setSelectedTemplate(null);
+      }
+
       await invoke("delete_user_template", { templateId });
       loadUserTemplates();
     } catch (error) {
