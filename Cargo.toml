@@ -1,6 +1,6 @@
 [package]
 name = "dstatus-rs"
-version = "0.1.0"
+version = "0.0.35"
 edition = "2021"
 license = "MIT"
 description = "Discord status manager"

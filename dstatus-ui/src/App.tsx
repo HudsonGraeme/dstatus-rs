@@ -110,13 +110,28 @@ export default function App() {
             e.preventDefault();
             setShowImportModal(true);
             break;
+          case "u":
+            // Debug: Log update info for testing
+            if (e.shiftKey) {
+              e.preventDefault();
+              console.log("Debug: Current update info:", updateInfo);
+              console.log("Debug: Current version:", version);
+              if (updateInfo) {
+                console.log("Debug: Update available:", updateInfo.has_update);
+                console.log(
+                  "Debug: Latest version:",
+                  updateInfo.latest_version
+                );
+              }
+            }
+            break;
         }
       }
     };
 
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [config]);
+  }, [config, version]);
 
   const loadConfig = async () => {
     try {
@@ -166,28 +181,41 @@ export default function App() {
     setCheckingUpdates(true);
     try {
       console.log("Checking for updates...");
+      console.log("About to call check_for_updates API...");
+
       const updateData = await invoke<UpdateInfo>("check_for_updates");
-      console.log("Update check result:", updateData);
+
+      console.log("API call successful! Raw response:", updateData);
+      console.log("Update check result:", JSON.stringify(updateData, null, 2));
+      console.log(
+        `Version comparison: Local "${updateData.current_version}" vs Remote "${updateData.latest_version}"`
+      );
+      console.log(`Has update: ${updateData.has_update}`);
+      console.log(`Download URL: ${updateData.download_url}`);
+
       setUpdateInfo(updateData);
-      setShowUpdateBanner(updateData.has_update);
+      setShowUpdateBanner(false); // Never show the top banner
 
       if (updateData.has_update) {
         console.log(
-          `Update available: ${updateData.current_version} → ${updateData.latest_version}`
+          `✅ Update available: ${updateData.current_version} → ${updateData.latest_version}`
         );
       } else {
         console.log(
-          `No update available. Current: ${updateData.current_version}, Latest: ${updateData.latest_version}`
+          `ℹ️ No update available. Current: ${updateData.current_version}, Latest: ${updateData.latest_version}`
         );
       }
       setLastUpdateCheck(new Date());
     } catch (error) {
-      console.error("Failed to check for updates:", error);
+      console.error("❌ Failed to check for updates:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       setUpdateInfo(null);
       setShowUpdateBanner(false);
       setLastUpdateCheck(new Date());
     } finally {
       setCheckingUpdates(false);
+      console.log("Update check completed");
     }
   };
 
@@ -413,47 +441,12 @@ max_party_size = ${config.max_party_size}`;
 
   return (
     <div className="flex h-screen bg-zinc-900 text-white overflow-hidden">
-      {/* Update Banner */}
-      {showUpdateBanner && updateInfo && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Download className="h-5 w-5 text-white" />
-              <div>
-                <span className="text-white font-medium">
-                  Update available: v{updateInfo.latest_version}
-                </span>
-                <span className="text-blue-100 ml-2 text-sm">
-                  (current: v{updateInfo.current_version})
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleUpdateClick}
-                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
-              >
-                <Download className="h-4 w-4" />
-                <span>Update to v{updateInfo.latest_version}</span>
-              </button>
-              <button
-                onClick={() => setShowUpdateBanner(false)}
-                className="text-white/70 hover:text-white p-1 rounded"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Sidebar */}
       <aside className="w-64 flex flex-col border-r border-zinc-800 bg-zinc-950/70 backdrop-blur-xl">
         {/* Header */}
         <div
           className={cn(
-            "flex flex-col items-center px-6 py-8 border-b border-zinc-800/50",
-            showUpdateBanner && "pt-20"
+            "flex flex-col items-center px-6 py-8 border-b border-zinc-800/50"
           )}
         >
           <pre className="text-purple-400 text-[5px] leading-tight font-mono">
@@ -470,6 +463,11 @@ max_party_size = ${config.max_party_size}`;
             <code className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">
               v{version}
             </code>
+            {updateInfo && (
+              <div className="text-xs text-zinc-600 mt-1">
+                Latest: v{updateInfo.latest_version}
+              </div>
+            )}
           </div>
         </div>
 
@@ -585,12 +583,7 @@ max_party_size = ${config.max_party_size}`;
       </aside>
 
       {/* Main Content */}
-      <main
-        className={cn(
-          "flex-1 flex flex-col bg-zinc-900 overflow-hidden",
-          showUpdateBanner && "pt-16"
-        )}
-      >
+      <main className={cn("flex-1 flex flex-col bg-zinc-900 overflow-hidden")}>
         {/* Header */}
         <header className="border-b border-zinc-800/50 bg-zinc-950/30 backdrop-blur-xl px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">

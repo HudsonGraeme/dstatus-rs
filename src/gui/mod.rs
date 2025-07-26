@@ -373,9 +373,7 @@ async fn load_user_template(template_id: String, state: State<'_, AppState>) -> 
 }
 
 fn save_user_templates_to_disk(templates: &[UserTemplate]) -> Result<(), String> {
-    let config_dir = dirs::config_dir()
-        .ok_or("Failed to get config directory")?
-        .join("dstatus");
+    let config_dir = crate::get_config_dir();
 
     std::fs::create_dir_all(&config_dir)
         .map_err(|e| format!("Failed to create config directory: {}", e))?;
@@ -401,9 +399,7 @@ fn save_user_templates_to_disk(templates: &[UserTemplate]) -> Result<(), String>
 }
 
 fn load_user_templates_from_disk() -> Result<Vec<UserTemplate>, String> {
-    let config_dir = dirs::config_dir()
-        .ok_or("Failed to get config directory")?
-        .join("dstatus");
+    let config_dir = crate::get_config_dir();
 
     let templates_file = config_dir.join("user_templates.toml");
 
@@ -541,13 +537,11 @@ async fn ensure_cli_available() -> Result<(), String> {
 
 
 pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
-    // Load or create default config
-    let config_dir = dirs::config_dir()
-        .ok_or("Failed to get config directory")?
-        .join("dstatus");
+    // Load or create default config - use same path as CLI
+    let config_dir = crate::get_config_dir();
     std::fs::create_dir_all(&config_dir)?;
 
-    let config_file = config_dir.join("config.toml");
+    let config_file = config_dir.join("configuration.toml");
     let config = if config_file.exists() {
         let content = std::fs::read_to_string(&config_file)?;
         toml::from_str(&content).unwrap_or_else(|_| Config::default())
