@@ -60,7 +60,9 @@
                 "providerShortName": null,
                 "signingIdentity": null
             },
-            "resources": [],
+            "resources": [
+                "scripts/install.sh"
+            ],
             "shortDescription": "Discord status manager",
             "targets": "all",
             "windows": {

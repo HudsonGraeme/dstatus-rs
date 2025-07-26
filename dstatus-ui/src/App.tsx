@@ -70,7 +70,6 @@ export default function App() {
     checkDaemonStatus();
     loadUserTemplates();
     loadGalleryTemplatesHashes();
-    checkCliInstalled();
 
     const updateInterval = setInterval(checkForUpdates, 300000);
     const statusInterval = setInterval(checkDaemonStatus, 5000);
@@ -116,12 +115,8 @@ export default function App() {
               e.preventDefault();
               console.log("Debug: Current update info:", updateInfo);
               console.log("Debug: Current version:", version);
-              if (updateInfo) {
+              if (updateInfo?.has_update) {
                 console.log("Debug: Update available:", updateInfo.has_update);
-                console.log(
-                  "Debug: Latest version:",
-                  updateInfo.latest_version
-                );
               }
             }
             break;
@@ -181,41 +176,23 @@ export default function App() {
     setCheckingUpdates(true);
     try {
       console.log("Checking for updates...");
-      console.log("About to call check_for_updates API...");
-
       const updateData = await invoke<UpdateInfo>("check_for_updates");
 
-      console.log("API call successful! Raw response:", updateData);
-      console.log("Update check result:", JSON.stringify(updateData, null, 2));
-      console.log(
-        `Version comparison: Local "${updateData.current_version}" vs Remote "${updateData.latest_version}"`
-      );
-      console.log(`Has update: ${updateData.has_update}`);
-      console.log(`Download URL: ${updateData.download_url}`);
-
       setUpdateInfo(updateData);
-      setShowUpdateBanner(false); // Never show the top banner
+      setShowUpdateBanner(updateData.has_update);
 
       if (updateData.has_update) {
         console.log(
           `✅ Update available: ${updateData.current_version} → ${updateData.latest_version}`
         );
       } else {
-        console.log(
-          `ℹ️ No update available. Current: ${updateData.current_version}, Latest: ${updateData.latest_version}`
-        );
+        console.log("ℹ️ No update available.");
       }
-      setLastUpdateCheck(new Date());
     } catch (error) {
       console.error("❌ Failed to check for updates:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setUpdateInfo(null);
-      setShowUpdateBanner(false);
-      setLastUpdateCheck(new Date());
     } finally {
       setCheckingUpdates(false);
-      console.log("Update check completed");
+      setLastUpdateCheck(new Date());
     }
   };
 
@@ -254,9 +231,13 @@ export default function App() {
     }
   };
 
-  const handleUpdateClick = () => {
-    if (updateInfo?.download_url) {
-      open(updateInfo.download_url);
+  const handleUpdateClick = async () => {
+    if (updateInfo?.has_update) {
+      try {
+        await invoke("update_and_relaunch");
+      } catch (error) {
+        console.error("Update failed:", error);
+      }
     }
   };
 
@@ -463,9 +444,9 @@ max_party_size = ${config.max_party_size}`;
             <code className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">
               v{version}
             </code>
-            {updateInfo && (
+            {updateInfo?.has_update && (
               <div className="text-xs text-zinc-600 mt-1">
-                Latest: v{updateInfo.latest_version}
+                Latest: v{version}
               </div>
             )}
           </div>
@@ -559,10 +540,16 @@ max_party_size = ${config.max_party_size}`;
                 </span>
               </div>
               <button
-                onClick={checkForUpdates}
+                onClick={
+                  updateInfo?.has_update ? handleUpdateClick : checkForUpdates
+                }
                 disabled={checkingUpdates}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:text-zinc-600"
-                title="Check for updates"
+                title={
+                  updateInfo?.has_update
+                    ? "Download and Install Update"
+                    : "Check for updates"
+                }
               >
                 {checkingUpdates ? (
                   <Loader className="h-3 w-3 animate-spin" />

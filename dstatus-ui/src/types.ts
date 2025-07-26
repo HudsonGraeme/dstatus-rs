@@ -20,11 +20,23 @@ export interface Config {
   instance?: boolean;
 }
 
-export interface Template {
+export type Button = {
+  label: string;
+  url: string;
+};
+
+export type UpdateInfo = {
+  has_update: boolean;
+  current_version: string;
+  latest_version: string;
+  download_url: string;
+};
+
+export type Template = {
   name: string;
   description: string;
   config: Config;
-}
+};
 
 export interface UserTemplate {
   id: string;
@@ -33,11 +45,4 @@ export interface UserTemplate {
   config: Config;
   created_at: string;
   last_used: string;
-}
-
-export interface UpdateInfo {
-  current_version: string;
-  latest_version: string;
-  has_update: boolean;
-  download_url: string;
 }
