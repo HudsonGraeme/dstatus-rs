@@ -23,19 +23,7 @@ struct UserTemplate {
     last_used: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-struct UpdateInfo {
-    current_version: String,
-    latest_version: String,
-    has_update: bool,
-    download_url: String,
-}
 
-#[derive(Serialize, Deserialize, Clone)]
-struct GitHubRelease {
-    tag_name: String,
-    html_url: String,
-}
 
 struct AppState {
     config: Mutex<Config>,
@@ -191,89 +179,7 @@ async fn get_app_version() -> Result<String, String> {
     Ok(env!("CARGO_PKG_VERSION").to_string())
 }
 
-#[tauri::command]
-async fn check_for_updates() -> Result<UpdateInfo, String> {
-    let current_version = env!("CARGO_PKG_VERSION");
-    let repo_url = "https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest";
 
-    let client = reqwest::Client::builder()
-        .user_agent("dstatus-rs")
-        .build()
-        .map_err(|e| format!("Failed to build reqwest client: {}", e))?;
-
-    let response = client.get(repo_url)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to check for updates: {}", e))?;
-
-    let status = response.status();
-    if !status.is_success() {
-        let error_body = response.text().await.unwrap_or_else(|_| "Could not read error body".to_string());
-        return Err(format!("GitHub API request failed with status {}: {}", status, error_body));
-    }
-
-    let release: GitHubRelease = response.json()
-        .await
-        .map_err(|e| format!("Failed to parse release data: {}", e))?;
-
-    let latest_version = release.tag_name.strip_prefix('v').unwrap_or(&release.tag_name).to_string();
-    let has_update = version_compare(current_version, &latest_version);
-
-    Ok(UpdateInfo {
-        current_version: current_version.to_string(),
-        latest_version,
-        has_update,
-        download_url: release.html_url,
-    })
-}
-
-fn version_compare(current: &str, latest: &str) -> bool {
-    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
-    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
-
-    for i in 0..std::cmp::max(current_parts.len(), latest_parts.len()) {
-        let current_part = current_parts.get(i).unwrap_or(&0);
-        let latest_part = latest_parts.get(i).unwrap_or(&0);
-
-        if latest_part > current_part {
-            return true;
-        } else if latest_part < current_part {
-            return false;
-        }
-    }
-    false
-}
-
-#[tauri::command]
-async fn update_and_relaunch(app_handle: tauri::AppHandle) -> Result<(), String> {
-    println!("Starting update process...");
-
-    let script_path = app_handle.path_resolver()
-        .resolve_resource("scripts/install.sh")
-        .ok_or_else(|| "Failed to resolve install script path".to_string())?;
-
-    println!("Install script path: {:?}", script_path);
-
-    let output = std::process::Command::new("sh")
-        .arg(script_path)
-        .output()
-        .map_err(|e| format!("Failed to execute update script: {}", e))?;
-
-    if output.status.success() {
-        println!("Update script executed successfully.");
-        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-        app_handle.restart();
-        Ok(())
-    } else {
-        let error_message = format!(
-            "Update script failed with status: {}. stderr: {}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr)
-        );
-        println!("{}", error_message);
-        Err(error_message)
-    }
-}
 
 #[tauri::command]
 async fn load_config_from_source(source: String) -> Result<Config, String> {
@@ -603,8 +509,6 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             reload_daemon_config,
             load_config_from_source,
             get_app_version,
-            check_for_updates,
-            update_and_relaunch,
             get_user_templates,
             save_user_template,
             delete_user_template,

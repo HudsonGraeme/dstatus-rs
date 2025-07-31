@@ -26,10 +26,12 @@ export type Button = {
 };
 
 export type UpdateInfo = {
-  has_update: boolean;
-  current_version: string;
-  latest_version: string;
-  download_url: string;
+  shouldUpdate: boolean;
+  manifest?: {
+    version: string;
+    date: string;
+    body: string;
+  };
 };
 
 export type Template = {

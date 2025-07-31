@@ -1,7 +1,6 @@
 {
     "build": {
         "beforeBuildCommand": "cd dstatus-ui && npm run build",
-        "beforeDevCommand": "cd dstatus-ui && npm run dev",
         "devPath": "http://localhost:5173",
         "distDir": "./dstatus-ui/dist"
     },
@@ -38,6 +37,9 @@
             },
             "os": {
                 "all": true
+            },
+            "updater": {
+                "all": true
             }
         },
         "bundle": {
@@ -60,9 +62,7 @@
                 "providerShortName": null,
                 "signingIdentity": null
             },
-            "resources": [
-                "scripts/install.sh"
-            ],
+            "resources": [],
             "shortDescription": "Discord status manager",
             "targets": "all",
             "windows": {
@@ -75,7 +75,12 @@
             "csp": null
         },
         "updater": {
-            "active": false
+            "active": true,
+            "endpoints": [
+                "https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest"
+            ],
+            "dialog": true,
+            "pubkey": ""
         },
         "windows": [
             {
