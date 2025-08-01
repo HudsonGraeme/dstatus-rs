@@ -1,6 +1,7 @@
 import { open as openDialog, save } from "@tauri-apps/api/dialog";
 import { open } from "@tauri-apps/api/shell";
 import { invoke } from "@tauri-apps/api/tauri";
+import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
 import {
   Check,
   Code,
@@ -115,8 +116,11 @@ export default function App() {
               e.preventDefault();
               console.log("Debug: Current update info:", updateInfo);
               console.log("Debug: Current version:", version);
-              if (updateInfo?.has_update) {
-                console.log("Debug: Update available:", updateInfo.has_update);
+              if (updateInfo?.shouldUpdate) {
+                console.log(
+                  "Debug: Update available:",
+                  updateInfo.shouldUpdate
+                );
               }
             }
             break;
@@ -176,14 +180,14 @@ export default function App() {
     setCheckingUpdates(true);
     try {
       console.log("Checking for updates...");
-      const updateData = await invoke<UpdateInfo>("check_for_updates");
+      const updateData = await checkUpdate();
 
       setUpdateInfo(updateData);
-      setShowUpdateBanner(updateData.has_update);
+      setShowUpdateBanner(updateData.shouldUpdate);
 
-      if (updateData.has_update) {
+      if (updateData.shouldUpdate) {
         console.log(
-          `✅ Update available: ${updateData.current_version} → ${updateData.latest_version}`
+          `✅ Update available: ${version} → ${updateData.manifest?.version}`
         );
       } else {
         console.log("ℹ️ No update available.");
@@ -232,11 +236,17 @@ export default function App() {
   };
 
   const handleUpdateClick = async () => {
-    if (updateInfo?.has_update) {
+    if (updateInfo?.shouldUpdate) {
+      setCheckingUpdates(true);
       try {
-        await invoke("update_and_relaunch");
+        console.log("Starting update process...");
+        await installUpdate();
+        console.log("Update completed successfully");
       } catch (error) {
         console.error("Update failed:", error);
+        alert(`Update failed: ${error}`);
+      } finally {
+        setCheckingUpdates(false);
       }
     }
   };
@@ -444,7 +454,7 @@ max_party_size = ${config.max_party_size}`;
             <code className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded">
               v{version}
             </code>
-            {updateInfo?.has_update && (
+            {updateInfo?.shouldUpdate && (
               <div className="text-xs text-zinc-600 mt-1">
                 Latest: v{version}
               </div>
@@ -528,32 +538,32 @@ max_party_size = ${config.max_party_size}`;
                 <div
                   className={cn(
                     "h-2 w-2 rounded-full",
-                    updateInfo?.has_update
+                    updateInfo?.shouldUpdate
                       ? "bg-orange-400 animate-pulse"
                       : "bg-green-400"
                   )}
                 />
                 <span className="text-xs text-zinc-400">
-                  {updateInfo?.has_update
-                    ? `v${updateInfo.latest_version} available`
+                  {updateInfo?.shouldUpdate
+                    ? `v${updateInfo.manifest?.version} available`
                     : "Up to date"}
                 </span>
               </div>
               <button
                 onClick={
-                  updateInfo?.has_update ? handleUpdateClick : checkForUpdates
+                  updateInfo?.shouldUpdate ? handleUpdateClick : checkForUpdates
                 }
                 disabled={checkingUpdates}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:text-zinc-600"
                 title={
-                  updateInfo?.has_update
+                  updateInfo?.shouldUpdate
                     ? "Download and Install Update"
                     : "Check for updates"
                 }
               >
                 {checkingUpdates ? (
                   <Loader className="h-3 w-3 animate-spin" />
-                ) : updateInfo?.has_update ? (
+                ) : updateInfo?.shouldUpdate ? (
                   <Download className="h-3 w-3" />
                 ) : (
                   <RefreshCw className="h-3 w-3" />
