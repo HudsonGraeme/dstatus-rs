@@ -32,6 +32,7 @@ ratatui = { version = "0.27.0", features = ["all-widgets"] }
 crossterm = "0.27.0"
 unicode-width = "0.1.14"
 signal-hook = "0.3.18"
+version-compare = "0.2.0"
 
 # Tauri dependencies
 tauri = { version = "1.6", features = [
@@ -46,7 +47,7 @@ tauri = { version = "1.6", features = [
     "notification-all",
     "os-all",
     "shell-open",
-    "updater",
+    "shell-execute",
 
     "devtools",
 ] }

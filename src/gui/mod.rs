@@ -23,6 +23,17 @@ struct UserTemplate {
     last_used: String,
 }
 
+#[derive(Serialize, Clone)]
+struct UpdateInfo {
+    should_update: bool,
+    manifest: Option<UpdateManifest>,
+}
+
+#[derive(Serialize, Clone)]
+struct UpdateManifest {
+    version: String,
+}
+
 
 
 struct AppState {
@@ -470,6 +481,44 @@ async fn ensure_cli_available() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn check_for_updates() -> Result<UpdateInfo, String> {
+    #[derive(Deserialize)]
+    struct GitHubRelease {
+        tag_name: String,
+        name: String,
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest")
+        .header("User-Agent", "dstatus-rs")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
+
+    let release: GitHubRelease = response.json().await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+
+    let current_version = env!("CARGO_PKG_VERSION");
+    let latest_version = release.tag_name.trim_start_matches('v');
+
+    let should_update = version_compare::compare(latest_version, current_version)
+        .map(|cmp| cmp == version_compare::Cmp::Gt)
+        .unwrap_or(false);
+
+    Ok(UpdateInfo {
+        should_update,
+        manifest: if should_update {
+            Some(UpdateManifest {
+                version: latest_version.to_string(),
+            })
+        } else {
+            None
+        },
+    })
+}
+
 
 pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
     // Load or create default config - use same path as CLI
@@ -515,7 +564,8 @@ pub fn run_gui() -> Result<(), Box<dyn std::error::Error>> {
             load_user_template,
             get_config_hash,
             check_cli_installed,
-            install_cli
+            install_cli,
+            check_for_updates
         ])
         .setup(|_app| {
             tauri::async_runtime::spawn(async {

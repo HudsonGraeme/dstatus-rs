@@ -13,7 +13,8 @@
             "all": false,
             "shell": {
                 "all": false,
-                "open": true
+                "open": true,
+                "execute": true
             },
             "dialog": {
                 "all": false,
@@ -70,14 +71,6 @@
         },
         "security": {
             "csp": null
-        },
-        "updater": {
-            "active": true,
-            "endpoints": [
-                "https://api.github.com/repos/HudsonGraeme/dstatus-rs/releases/latest"
-            ],
-            "dialog": true,
-            "pubkey": ""
         },
         "windows": [
             {

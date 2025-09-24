@@ -1,6 +1,6 @@
 import { open as openDialog, save } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api/tauri";
-import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
+import { Command } from "@tauri-apps/api/shell";
 import {
   Check,
   Download,
@@ -178,7 +178,7 @@ export default function App() {
     setCheckingUpdates(true);
     try {
       console.log("Checking for updates...");
-      const updateData = await checkUpdate();
+      const updateData = await invoke<UpdateInfo>("check_for_updates");
 
       setUpdateInfo(updateData);
       setShowUpdateBanner(updateData.shouldUpdate);
@@ -238,8 +238,13 @@ export default function App() {
       setCheckingUpdates(true);
       try {
         console.log("Starting update process...");
-        await installUpdate();
-        console.log("Update completed successfully");
+        const updateCommand = new Command('dstatus', ['update']);
+        await updateCommand.execute();
+        console.log("Update command executed, restarting app...");
+
+        // Restart the app
+        const { relaunch } = await import("@tauri-apps/api/process");
+        await relaunch();
       } catch (error) {
         console.error("Update failed:", error);
         alert(`Update failed: ${error}`);
