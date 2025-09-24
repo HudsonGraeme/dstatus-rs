@@ -37,9 +37,6 @@
             },
             "os": {
                 "all": true
-            },
-            "updater": {
-                "all": true
             }
         },
         "bundle": {

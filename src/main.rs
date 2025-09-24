@@ -20,6 +20,7 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use crate::config::Config;
 use rich_presence::RichPresence;
 
+// Test
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn display_banner() {

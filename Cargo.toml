@@ -46,6 +46,7 @@ tauri = { version = "1.6", features = [
     "notification-all",
     "os-all",
     "shell-open",
+    "updater",
 
     "devtools",
 ] }

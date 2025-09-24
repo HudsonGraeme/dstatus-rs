@@ -1,10 +1,8 @@
 import { open as openDialog, save } from "@tauri-apps/api/dialog";
-import { open } from "@tauri-apps/api/shell";
 import { invoke } from "@tauri-apps/api/tauri";
 import { checkUpdate, installUpdate } from "@tauri-apps/api/updater";
 import {
   Check,
-  Code,
   Download,
   Eye,
   FileText,
@@ -14,15 +12,14 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  Terminal,
   Trash2,
   Upload,
-  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ConfigEditor from "./components/ConfigEditor";
 import DaemonStatus from "./components/DaemonStatus";
 import DiscordPreview from "./components/DiscordPreview";
+import GettingStarted from "./components/GettingStarted";
 import TemplateGallery from "./components/TemplateGallery";
 import { cn } from "./lib/utils";
 import { Config, Template, UpdateInfo, UserTemplate } from "./types";
@@ -71,6 +68,7 @@ export default function App() {
     checkDaemonStatus();
     loadUserTemplates();
     loadGalleryTemplatesHashes();
+    checkCliInstalled();
 
     const updateInterval = setInterval(checkForUpdates, 300000);
     const statusInterval = setInterval(checkDaemonStatus, 5000);
@@ -735,177 +733,12 @@ max_party_size = ${config.max_party_size}`;
             </div>
           )}
           {activeTab === "getstarted" && (
-            <div className="h-full overflow-y-auto p-6">
-              <div className="max-w-3xl mx-auto space-y-8">
-                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl overflow-hidden">
-                  <div className="aspect-video bg-zinc-900">
-                    <video
-                      className="w-full h-full rounded-t-xl"
-                      controls
-                      preload="metadata"
-                    >
-                      <source src="/tutorial.mp4" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-white font-medium text-sm">
-                      How to Create a Discord Application
-                    </h3>
-                    <p className="text-zinc-400 text-xs">
-                      Step-by-step guide to get your Client ID
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-3">
-                  <button
-                    onClick={() =>
-                      open("https://discord.com/developers/applications")
-                    }
-                    className="bg-[#5865f2] hover:bg-[#4752c4] text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 text-sm"
-                  >
-                    <Code className="h-4 w-4" />
-                    <span>Developer Portal</span>
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      open(
-                        "https://discord.com/developers/docs/rich-presence/how-to"
-                      )
-                    }
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white p-3 rounded-lg transition-all duration-200 flex items-center space-x-2 border border-zinc-700 text-sm"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>Documentation</span>
-                  </button>
-                </div>
-
-                {/* CLI Status Card */}
-                <div className="bg-zinc-800/30 backdrop-blur-sm border border-zinc-700/50 rounded-xl p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-white font-medium text-lg flex items-center space-x-2">
-                        <Terminal className="h-5 w-5" />
-                        <span>Command Line Interface</span>
-                      </h3>
-                      <p className="text-zinc-400 text-sm mt-1">
-                        Access dstatus from your terminal
-                      </p>
-                    </div>
-                    <div
-                      className={cn(
-                        "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium",
-                        cliInstalled
-                          ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                          : "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
-                      )}
-                    >
-                      {cliInstalled ? (
-                        <>
-                          <Check className="h-3 w-3" />
-                          <span>Working</span>
-                        </>
-                      ) : (
-                        <>
-                          <X className="h-3 w-3" />
-                          <span>Not Available</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {cliInstalled && (
-                    <div className="mb-4">
-                      <button
-                        onClick={checkCliInstalled}
-                        className="text-zinc-400 hover:text-zinc-200 text-xs transition-colors flex items-center space-x-1"
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        <span>Test CLI</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {!cliInstalled && (
-                    <div className="mb-4">
-                      <button
-                        onClick={installCli}
-                        disabled={cliInstalling}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
-                      >
-                        {cliInstalling ? (
-                          <>
-                            <Loader className="h-4 w-4 animate-spin" />
-                            <span>Installing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Terminal className="h-4 w-4" />
-                            <span>Install CLI</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {cliInstallMessage && (
-                    <div className="mb-4 p-3 bg-zinc-900/50 border border-zinc-700/50 rounded-lg">
-                      <p className="text-zinc-300 text-xs whitespace-pre-line">
-                        {cliInstallMessage}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-xs">
-                    <div className="text-zinc-400">Available commands:</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
-                        dstatus on
-                      </code>
-                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
-                        dstatus off
-                      </code>
-                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
-                        dstatus configure
-                      </code>
-                      <code className="bg-zinc-900/50 px-2 py-1 rounded text-zinc-300">
-                        dstatus gui
-                      </code>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-800/20 border border-zinc-700/30 rounded-lg p-4">
-                  <h3 className="text-white font-medium text-sm mb-3">
-                    Quick Steps
-                  </h3>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center space-x-2 text-zinc-300">
-                      <span className="bg-blue-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold">
-                        1
-                      </span>
-                      <span>
-                        Create application in Discord Developer Portal
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-zinc-300">
-                      <span className="bg-purple-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold">
-                        2
-                      </span>
-                      <span>Copy the Application ID (Client ID)</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-zinc-300">
-                      <span className="bg-green-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold">
-                        3
-                      </span>
-                      <span>Paste it in the Configuration tab</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <GettingStarted
+              cliInstalled={cliInstalled}
+              onInstallCli={installCli}
+              cliInstalling={cliInstalling}
+              cliInstallMessage={cliInstallMessage}
+            />
           )}
         </div>
       </main>
