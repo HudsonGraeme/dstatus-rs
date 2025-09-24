@@ -14,12 +14,20 @@
             "shell": {
                 "all": false,
                 "open": true,
-                "execute": true
+                "execute": true,
+                "scope": [
+                    {
+                        "name": "dstatus",
+                        "cmd": "dstatus",
+                        "args": ["update"]
+                    }
+                ]
             },
             "dialog": {
                 "all": false,
                 "open": true,
-                "save": true
+                "save": true,
+                "message": true
             },
             "fs": {
                 "all": false,
@@ -38,6 +46,9 @@
             },
             "os": {
                 "all": true
+            },
+            "process": {
+                "relaunch": true
             }
         },
         "bundle": {

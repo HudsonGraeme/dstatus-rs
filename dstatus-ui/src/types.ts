@@ -29,8 +29,6 @@ export type UpdateInfo = {
   shouldUpdate: boolean;
   manifest?: {
     version: string;
-    date: string;
-    body: string;
   };
 };
 

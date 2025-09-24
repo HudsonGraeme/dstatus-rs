@@ -38,6 +38,7 @@ version-compare = "0.2.0"
 tauri = { version = "1.6", features = [
     "dialog-open",
     "dialog-save",
+    "dialog-message",
     "fs-create-dir",
     "fs-exists",
     "fs-read-dir",
@@ -46,6 +47,7 @@ tauri = { version = "1.6", features = [
     "http-all",
     "notification-all",
     "os-all",
+    "process-relaunch",
     "shell-open",
     "shell-execute",
 

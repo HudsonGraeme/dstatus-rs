@@ -25,6 +25,7 @@ struct UserTemplate {
 
 #[derive(Serialize, Clone)]
 struct UpdateInfo {
+    #[serde(rename = "shouldUpdate")]
     should_update: bool,
     manifest: Option<UpdateManifest>,
 }
@@ -502,9 +503,16 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
     let current_version = env!("CARGO_PKG_VERSION");
     let latest_version = release.tag_name.trim_start_matches('v');
 
+    println!("Update check: current={}, latest={}", current_version, latest_version);
+
     let should_update = version_compare::compare(latest_version, current_version)
-        .map(|cmp| cmp == version_compare::Cmp::Gt)
+        .map(|cmp| {
+            println!("Version comparison result: {:?}", cmp);
+            cmp == version_compare::Cmp::Gt
+        })
         .unwrap_or(false);
+
+    println!("Should update: {}", should_update);
 
     Ok(UpdateInfo {
         should_update,

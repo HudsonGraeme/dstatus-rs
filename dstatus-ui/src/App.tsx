@@ -238,7 +238,7 @@ export default function App() {
       setCheckingUpdates(true);
       try {
         console.log("Starting update process...");
-        const updateCommand = new Command('dstatus', ['update']);
+        const updateCommand = new Command('dstatus');
         await updateCommand.execute();
         console.log("Update command executed, restarting app...");
 
