@@ -486,7 +486,6 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
     #[derive(Deserialize)]
     struct GitHubRelease {
         tag_name: String,
-        name: String,
     }
 
     let client = reqwest::Client::new();
